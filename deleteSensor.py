@@ -2,13 +2,17 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
 from firebase_admin.exceptions import FirebaseError
+import json # for configuration
 
 # CONFIG
-s_ServiceAccountKeyPath = 'C:/Users/olivi/Downloads/swe4103-db-firebase-adminsdk-jq4dv-e4128ec05e.json'
-s_DatabaseURL = 'https://swe4103-db-default-rtdb.firebaseio.com/'
-s_EnergyDataPath = '/energydata'
-s_SensorPath = '/sensors'
-s_SerialNumber = "S0002"
+with open('config.json', 'r') as config_file:
+    config = json.load(config_file)
+
+s_ServiceAccountKeyPath = config["s_ServiceAccountKeyPath"]
+s_DatabaseURL = config["s_DatabaseURL"]
+s_EnergyDataPath = config["s_EnergyDataPath"]
+s_SensorPath = config["s_SensorPath"]
+s_SerialNumber = config["s_SerialNumber"]
 #
 
 # Function to delete the sensor by s_SerialNumber from the DB.

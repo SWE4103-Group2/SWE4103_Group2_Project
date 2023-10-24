@@ -1,0 +1,7 @@
+{
+    "s_ServiceAccountKeyPath": "C:/Users/olivi/Downloads/swe4103-db-firebase-adminsdk-jq4dv-e4128ec05e.json",
+    "s_DatabaseURL": "https://swe4103-db-default-rtdb.firebaseio.com/",
+    "s_EnergyDataPath": "/energydata",
+    "s_SensorPath": "/sensors",
+    "s_SerialNumber": "S0002"
+}
