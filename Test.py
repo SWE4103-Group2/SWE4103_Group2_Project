@@ -51,7 +51,7 @@ def update_data_file(s_SerialNumber, i_DataValue):
         ref.push().set(key)
 
 def main():
-    lst_serial_numbers = ["Water_Manic5_S0003"]
+    lst_serial_numbers = ["Water_Group2_S0001"]
     last_seen = None
     #while True:
     for i in range(0,16): # print 16 values for 3 sensors

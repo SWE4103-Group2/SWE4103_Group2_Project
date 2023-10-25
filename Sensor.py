@@ -18,7 +18,7 @@ from firebase_admin import db
 import unittest
 
 # CONFIG
-with open('config.json', 'r') as config_file:
+with open('C:/Users/olivi/Desktop/Fall_2023/SWE4103/Project/config.json', 'r') as config_file:
     config = json.load(config_file)
 
 s_ServiceAccountKeyPath = config["s_ServiceAccountKeyPath"]
@@ -79,10 +79,13 @@ class Sensor:
   i_NumObjects = {} # number of existing sensors
   #df_HistoricalData = pd.DataFrame() # 2D array holding historical data OR get_historical_data()
 
-  def __init__(self, s_SensorType, s_Location, i_SamplingRate):
+  def __init__(self, s_SensorType, s_Location, i_SamplingRate, s_SerialNumber=None):
         self.s_SensorType = s_SensorType
         self.s_Location = s_Location
-        self.s_SerialNumber = self.generate_serial_number()
+        if s_SerialNumber is None:
+          self.s_SerialNumber = self.generate_serial_number()
+        else:
+          self.s_SerialNumber = s_SerialNumber
         self.f_Value = [-1,-1]
         self.i_SamplingRate = i_SamplingRate
   
@@ -98,16 +101,6 @@ class Sensor:
     next_serial_number = f"{self.s_SensorType}_{self.s_Location}_S{max_last_number + 1:04d}"
     return next_serial_number
   
-  # Helper function for getSensor(): fixes issue with creating a sensor with the wrong serial number one digit ahead
-  def change_serial_number(self):
-      i_LastNum = int(self.s_SerialNumber[-4:])
-      if i_LastNum > 1:
-          new_last_number = i_LastNum - 1
-          new_serial_number = f"{self.s_SensorType}_{self.s_Location}_S{new_last_number:04d}"
-          self.s_SerialNumber = new_serial_number
-      else:
-          print("Error: Couldn't adjust serial number.")
-
   def get_type(self):
      return self.s_SensorType
 
@@ -147,50 +140,51 @@ class Sensor:
   # TO-DO develop functionality to account for all out of bound cases other than incorrect ones
   def get_last_sampled_time(self, s_SensorPath):
     try:
-        s_DataPath = f"/{self.s_SensorType.lower()}data"
-        data_ref = db.reference(s_DataPath)
-        sensor_data_query = data_ref.order_by_child('id').equal_to(self.s_SerialNumber).get()
+        print("Sensor Serial Number:", self.s_SerialNumber)
+        s_DataPath = f"/{self.s_SensorType.lower()}data" # go to correct table in database based on sensor type
+        data_ref = db.reference(s_DataPath) # set reference
+        sensor_data_query = data_ref.order_by_child('id').equal_to(self.s_SerialNumber).get() # query by the serial number
 
-        if sensor_data_query:
-            data_values = list(sensor_data_query.values())
-            data_values.sort(key=lambda x: x['timestamp'], reverse=True)
-
-            most_recent_entry = None
-            for entry in data_values:
+        if sensor_data_query: # if sensor exists
+            data_values = list(sensor_data_query.values()) # get the values for that serial number
+            data_values.sort(key=lambda x: x['timestamp'], reverse=True) # sort timestamps from the bottom (most recent timestamp/value)
+            
+            most_recent_entry = None # variable to to hold most recent entry
+            for entry in data_values: # loop through each entry in the sorted values to find the first value that is valid (i.e. not NoneType)
                 if entry.get("value") is not None:
                     most_recent_entry = entry
                     break
 
-            if most_recent_entry:
-                most_recent_value = most_recent_entry.get("value")
-                if most_recent_value == -1:
-                    previous_sampled_time = None
-                    for entry in data_values:
+            if most_recent_entry: # if a most recent entry is found (i.e. has data)
+                most_recent_value = most_recent_entry.get("value") # pull most recent value
+                if most_recent_value == -1: # if the most recent value is out of bounds... (i.e. -1)
+                    previous_sampled_time = None # variable to hold the previously sampled time
+                    for entry in data_values: # loop through each entry in the sorted values to find the first value that is valid (i.e. not -1)
                         if entry.get("value") != -1:
                             previous_sampled_time = entry.get("timestamp")
                             break
 
-                    if previous_sampled_time:
-                        expected_time = datetime.datetime.strptime(previous_sampled_time, "%Y-%m-%d %H:%M:%S") + datetime.timedelta(seconds=self.i_SamplingRate)
-                        if most_recent_entry.get("timestamp") <= expected_time.strftime("%Y-%m-%d %H:%M:%S"):
-                            print(f"Error: '{self.s_SerialNumber}' is out of bounds.")
-                            print(f"Last Sampled Time: {previous_sampled_time}")
-                            flagged_ref = db.reference(f'/{s_SensorPath}')
-                            flagged_sensor_data_query = flagged_ref.order_by_child('id').equal_to(self.s_SerialNumber).get()
-                            for key in flagged_sensor_data_query:
-                                entry = flagged_sensor_data_query[key]
-                                entry['errorflag'] = 1
-                                flagged_ref.child(key).update(entry)
-                    else:
+                    if previous_sampled_time: # if there exists a previously sampled time
+                        expected_time = datetime.datetime.strptime(previous_sampled_time, "%Y-%m-%d %H:%M:%S") + datetime.timedelta(seconds=self.i_SamplingRate) # get the expected time for the last sample
+                        if ((most_recent_entry.get("timestamp")) <= (expected_time.strftime("%Y-%m-%d %H:%M:%S"))): # if the most recent entry is less than the expected sample time
+                            print(f"Error: '{self.s_SerialNumber}' is out of bounds.") # notify
+                            print(f"Last Sampled Time: {previous_sampled_time}") # get the last sampled time
+                            flagged_ref = db.reference(f'/{s_SensorPath}') # reference the sensor table in the database
+                            flagged_sensor_data_query = flagged_ref.order_by_child('id').equal_to(self.s_SerialNumber).get() # get the sensor
+                            for key in flagged_sensor_data_query: # loop through sensors in sensor table
+                                entry = flagged_sensor_data_query[key] # grab the correct sensor
+                                entry['errorflag'] = 1 # flag it
+                                flagged_ref.child(key).update(entry) # update sensor
+                    else: # no previously sampled time
                         print(f"'{self.s_SerialNumber}' is out of bounds, and no previous entry with a different value was found.")
                 elif most_recent_value is None:
                     raise ValueError(f"ValueError: Sensor '{self.s_SerialNumber}' does not exist or has a value of None.")
-                else:
+                else: # no most recent value
                   last_sampled_time = most_recent_entry.get("timestamp")
                   print(f"Last Sampled Time: {last_sampled_time}")
-            else:
+            else: # no most recent entry
                 raise ValueError(f"ValueError: No valid data found for '{self.s_SerialNumber}' in {s_DataPath}.")
-        else:
+        else: # no sensor exists
             raise ValueError(f"ValueError: No data found for '{self.s_SerialNumber}' in {s_DataPath}.")
     except FirebaseError as e:
         print(f"Firebase Error: {e}")
@@ -292,20 +286,19 @@ def createSensor(s_SensorType, s_Location, i_SamplingRate):
 
 # Function to return Sensor Object from database and allows use of sensor functionality
 def getSensor(s_SerialNumber, s_SensorPath):
+    ref = db.reference(s_SensorPath)
     serial_number_parts = s_SerialNumber.split("_")
     s_Location = serial_number_parts[1]
-    ref = db.reference(s_SensorPath)
     sensor_data = ref.order_by_child('id').equal_to(s_SerialNumber).get()
 
     if sensor_data:
         sensor_key = list(sensor_data.keys())[0]
         print("Sensor data:", sensor_data[sensor_key])
         x = sensor_data[sensor_key]
-        sensor = Sensor(x['type'], s_Location, x['samplingRate'])
-        sensor.change_serial_number()
+        sensor = Sensor(x['type'], s_Location, x['samplingRate'], s_SerialNumber)  # Use the sensor data directly
         return sensor
     else:
-        print("Sensor not found.")
+        print(f"Sensor '{s_SerialNumber}' not found.")
 
 # Function to delete the sensor by s_SerialNumber from the DB.
 def deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, s_SerialNumber):
@@ -334,13 +327,13 @@ def deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, s_SerialN
     except Exception as e:
         print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
 
-
 def main():
-    #sensor = createSensor("Water", "Manic5", 15)
-    sensor = getSensor("Water_Manic5_S0003", s_SensorPath)
-    #sensor.get_last_sampled_time(s_SensorPath) # testing function
-    sensor.set_state(s_SensorPath, 1) # testing function
-    #deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, "Water_Manic5_S0001")
-    
+    #sensor = createSensor("Water", "Group2", 15)
+    sensor = getSensor("Water_Group2_S0005", s_SensorPath)
+    #print(sensor.s_SerialNumber)
+    sensor.get_last_sampled_time(s_SensorPath) # testing function
+    #sensor.set_state(s_SensorPath, 0) # testing function
+    #deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, "Water_Group2_S0002")
+
 if __name__ == "__main__":
     main()
