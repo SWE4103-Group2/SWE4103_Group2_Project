@@ -51,7 +51,7 @@ def update_data_file(s_SerialNumber, i_DataValue):
         ref.push().set(key)
 
 def main():
-    lst_serial_numbers = ["Water_HydroElectricDam_S0005"]
+    lst_serial_numbers = ["Water_Manic5_S0003"]
     last_seen = None
     #while True:
     for i in range(0,16): # print 16 values for 3 sensors
@@ -59,15 +59,6 @@ def main():
             data_value = generate_sensor_data() # Simulate sensor data generation
             update_data_file(serialNum, data_value)
         time.sleep(i_SamplingRate) # Wait for the next sampling interval
-
-def create_sensor():
-    temp = []
-    ref = db.reference('/sensors')
-    new = {'error flag': 0, 'id': 'Water_HydroElectricDam_S0004', 'type': "Water"}
-    temp.append(new)
-
-    for key in temp:
-        ref.push().set(key)
 
 if __name__ == "__main__":
     #create_sensor()

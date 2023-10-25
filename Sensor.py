@@ -88,22 +88,17 @@ class Sensor:
   
   # Function to generate a unique serial number with the format: SensorType_Location_S000X
   def generate_serial_number(self):
-    # Query Firebase for existing sensors at your specified reference point
-    ref = db.reference("/sensors")
+    ref = db.reference(s_SensorPath)
     existing_sensors = ref.get()
-
-    # Extract the last 4 digits of the serial numbers and find the maximum
     last_numbers = [int(key[-4:]) for key in existing_sensors if key.startswith(f"{self.s_SensorType}_{self.s_Location}_S")]
     if last_numbers:
         max_last_number = max(last_numbers)
     else:
         max_last_number = 0
-
-    # Generate the next unique serial number
     next_serial_number = f"{self.s_SensorType}_{self.s_Location}_S{max_last_number + 1:04d}"
-
     return next_serial_number
   
+  # Helper function for getSensor(): fixes issue with creating a sensor with the wrong serial number one digit ahead
   def change_serial_number(self):
       i_LastNum = int(self.s_SerialNumber[-4:])
       if i_LastNum > 1:
@@ -148,6 +143,8 @@ class Sensor:
     Sensor.df_HistoricalData.at[row, col] = float(new_data)
     return Sensor.df_HistoricalData.at[row, col]
   
+  # Function to pull the last sampled time stamp from a value that isn't -1 (out of bounds)
+  # TO-DO develop functionality to account for all out of bound cases other than incorrect ones
   def get_last_sampled_time(self, s_SensorPath):
     try:
         s_DataPath = f"/{self.s_SensorType.lower()}data"
@@ -200,7 +197,6 @@ class Sensor:
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
-
   def get_current_historical_data(self):
     return Sensor.df_HistoricalData
   
@@ -215,6 +211,7 @@ class Sensor:
   def get_state(self):
     return self.lst_States # returns current states for online/offline and out/in-bounds
   
+  # Function to set the state of the sensor system in the s_SensorPath reference point
   def set_state(self, s_SensorPath, i_State):
     flagged_ref = db.reference(f'/{s_SensorPath}')
     flagged_sensor_data_query = flagged_ref.order_by_child('id').equal_to(self.s_SerialNumber).get()
@@ -337,11 +334,13 @@ def deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, s_SerialN
     except Exception as e:
         print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
 
+
 def main():
-    #sensor = createSensor("Water", "HydroElectricDam", 15)
-    sensor = getSensor(s_SerialNumber, s_SensorPath)
-    sensor.get_last_sampled_time(s_SensorPath) # testing function
-    sensor.set_state(s_SensorPath, 0) # testing function
-    #deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, s_SerialNumber)
+    #sensor = createSensor("Water", "Manic5", 15)
+    sensor = getSensor("Water_Manic5_S0003", s_SensorPath)
+    #sensor.get_last_sampled_time(s_SensorPath) # testing function
+    sensor.set_state(s_SensorPath, 1) # testing function
+    #deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, "Water_Manic5_S0001")
+    
 if __name__ == "__main__":
     main()
