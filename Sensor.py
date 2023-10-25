@@ -7,6 +7,10 @@ import unittest
 import os
 import datetime
 from json import loads, dumps
+import firebase_admin
+from firebase_admin import db
+
+
 class WaterSensorValueError(Exception):
   min_wv = 2
   max_wv = 4
@@ -42,7 +46,15 @@ def negative_error_msg():
   raise CustomErrorMessage(error_message)
 class Sensor:
   i_NumObjects = 0 # number of existing sensors
-  df_HistoricalData = pd.DataFrame() # 2D array holding historical data OR get_historical_data()
+  
+  #replaced with db
+  #df_HistoricalData = pd.DataFrame() # 2D array holding historical data OR get_historical_data()
+
+  cred_obj = firebase_admin.credentials.Certificate('/Users/briannaorr/Documents/GitHub/SWE4103_Group2_Project/swe4103-db-firebase-adminsdk-jq4dv-e4128ec05e.json')
+  default_app = firebase_admin.initialize_app(cred_obj, {
+    'databaseURL':"https://swe4103-db-default-rtdb.firebaseio.com/"
+    })
+  
   def __init__(self, s_SensorType, s_Location, i_SamplingRate):
         self.s_SensorType = s_SensorType
         self.s_Location = s_Location
@@ -52,6 +64,9 @@ class Sensor:
         self.b_isOnline = False
         self.b_isOutOfBounds = False
         self.lst_States = [self.b_isOnline, self.b_isOutOfBounds] # should only be 2 values in order of isOnline? and isOutOfBounds?
+        self.energySensorsRef = db.reference("/energydata")
+        self.waterSensorsRef = db.reference("/waterdata")
+  
   def generate_serial_number(self):
     Sensor.i_NumObjects += 1 # Increment the last number of objects
     return f"{self.s_SensorType}_{self.s_Location}_{Sensor.i_NumObjects:04d}" # formatted as: Water/Energy_Location_0000
@@ -80,6 +95,8 @@ class Sensor:
       self.set_historical_data([t, val]) # setting historical data
       return(self.f_Value)
     return "FILE READ ERROR: CANNOT OPEN FILE AT THIS PATH."
+  
+  '''
   def set_value(self, new_data, row, col): # for scientist corrections
     if self.s_SensorType == 'Energy' and (new_data < 0 or new_data > 50):
         raise_energy_sensor_value_error(new_data)
@@ -87,6 +104,29 @@ class Sensor:
         raise_water_sensor_value_error(new_data)
     Sensor.df_HistoricalData.at[row, col] = float(new_data)
     return Sensor.df_HistoricalData.at[row, col]
+  '''
+  def set_value(self, new_data, timestamp): # for scientist corrections
+    
+    if self.s_SensorType == 'Energy' and (new_data >= 0 or new_data <=  50):
+      data = self.energySensorsRef.get()
+      if data: 
+         for key in data: 
+            if data[key][timestamp] == timestamp:
+              data['value'] = new_data
+              self.energySensorsRef.child(key).set(data)
+    elif self.s_SensorType == 'Energy' and (new_data < 0 or new_data > 50):
+      raise_energy_sensor_value_error(new_data)
+    elif self.s_SensorType == 'Water' and (new_data >= 2 or new_data <=  4):
+      data = self.waterSensorsRef.get()
+      if data: 
+         for key in data: 
+            if data[key][timestamp] == timestamp:
+              data['value'] = new_data
+              self.waterSensorsRef.child(key).set(data)
+    else:
+      raise_water_sensor_value_error(new_data)
+         
+  
   def get_last_sampled_time(self): # depends on get_value()
     return Sensor.df_HistoricalData.loc[Sensor.df_HistoricalData.index[-1], 't']
   def get_current_historical_data(self):
@@ -123,6 +163,7 @@ class Sensor:
   def set_sampling_rate(self, i_newSamplingRate):
     self.i_SamplingRate = i_newSamplingRate
     return self.i_SamplingRate # output to verify
+
 if __name__ == "__main__":
     i_NumSensors = 5 # Create an unspecfied number of sensors (could be in config file)
     lst_Sensors = []
@@ -140,6 +181,8 @@ if __name__ == "__main__":
         i_SamplingRate = 1 # Energy samples once every 1 second
         sensor2 = Sensor(s_SensorType2, s_Location2, i_SamplingRate)
         lst_Sensors2.append(sensor2)
+    
+    
     print("----------TEST CASES----------")
     for i in range(0,15):
       file_path = "C:/Users/olivi/Desktop/Fall_2023/SWE4103/Project/S0001.csv"
@@ -150,7 +193,8 @@ if __name__ == "__main__":
         sensor.get_value(t)
         sensor.get_last_sampled_time()
     sensor.set_value(3, 0, 'S'+sensor.f_SerialNumber[-4:])
-    print(Sensor.df_HistoricalData)
+
+    #print(Sensor.df_HistoricalData)
     print("------------------------------")
     sensor = lst_Sensors2[0] # pulling one sensor for testing
     print("----------TEST CASES----------")
@@ -162,3 +206,4 @@ if __name__ == "__main__":
     print(f"sensor.set_sampling_rate()\t{sensor.set_sampling_rate(i_newSamplingRate=3)}") # set new sampling rate to 3 seconds
     print(f"sensor.get_sampling_rate()\t{sensor.get_sampling_rate()}")
     print("------------------------------")
+    
