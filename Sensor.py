@@ -1,3 +1,12 @@
+
+#####################################################
+'''
+   (Sensor.py)   OGR
+
+env: Windows
+
+'''
+################### BASIC IMPORTS ###################
 import pandas as pd
 import numpy as np
 import time
@@ -6,78 +15,36 @@ import random
 from random import randint
 import os
 import json
-from json import loads, dumps
-
 # pip install firebase
 import firebase_admin
 from firebase_admin.exceptions import FirebaseError
 from firebase_admin import credentials
 from firebase_admin import db
-
 # for testing
 import unittest
+############### END: BASIC IMPORTS ##################
 
-# CONFIG
-with open('C:/Users/olivi/Desktop/Fall_2023/SWE4103/Project/config.json', 'r') as config_file:
+s_ConfigFilePath = 'C:/Users/Olivia Rae/Desktop/Fall_2023/SWE4103/Project/config.json'
+
+################### CONFIGURATION ###################
+with open(s_ConfigFilePath, 'r') as config_file:
     config = json.load(config_file)
 
-s_ServiceAccountKeyPath = config["s_ServiceAccountKeyPath"]
-s_DatabaseURL = config["s_DatabaseURL"]
-s_SensorPath = config["s_SensorPath"]
-s_SerialNumber = config["s_SerialNumber"]
-#
+s_ServiceAccountKeyPath   = config["s_ServiceAccountKeyPath"]
+s_DatabaseURL             = config["s_DatabaseURL"]
+s_SensorPath              = config["s_SensorPath"]
+s_SerialNumber            = config["s_SerialNumber"]
+i_SamplingRate            = config["i_SamplingRate"]
+############## END: CONFIGURATION ###################
 
+# Initialize Database Connections
 cred = credentials.Certificate(s_ServiceAccountKeyPath)
 firebase_admin.initialize_app(cred, {'databaseURL': s_DatabaseURL})
-
-# Error Messages
-class WaterSensorValueError(Exception):
-  min_wv = 2
-  max_wv = 4
-  def __init__(self, f,  *args):
-    super().__init__(args)
-    self.f = f
-  def __str__(self):
-    return f'{self.f} is not in the valid range {self.min_wv, self.max_wv}'
-  
-def raise_water_sensor_value_error(val):
-  raise WaterSensorValueError(val)
-
-class EnergySensorValueError(Exception):
-  min_ev = 0
-  max_ev = 50
-  def __init__(self, f,  *args):
-    super().__init__(args)
-    self.f = f
-  def __str__(self):
-    return f'{self.f} is not in the valid range {self.min_ev, self.max_ev}'
-  
-def raise_energy_sensor_value_error(val):
-  raise EnergySensorValueError(val)
-
-class CustomErrorMessage(Exception):
-  def __init__(self, message):
-    self.message = message
-    super().__init__(self.message)
-
-def energy_sensor_error_msg():
-  error_message = "Energy sensor value is out of bounds."
-  raise CustomErrorMessage(error_message)
-
-def water_sensor_error_msg():
-  error_message = "Water sensor value is out of bounds."
-  raise CustomErrorMessage(error_message)
-
-def negative_error_msg():
-  error_message = "Sensor value can not be a negative."
-  raise CustomErrorMessage(error_message)
-#
 
 # Sensor Object Class
 class Sensor:
 
   i_NumObjects = {} # number of existing sensors
-  #df_HistoricalData = pd.DataFrame() # 2D array holding historical data OR get_historical_data()
 
   def __init__(self, s_SensorType, s_Location, i_SamplingRate, s_SerialNumber=None):
         self.s_SensorType = s_SensorType
@@ -86,7 +53,6 @@ class Sensor:
           self.s_SerialNumber = self.generate_serial_number()
         else:
           self.s_SerialNumber = s_SerialNumber
-        self.f_Value = [-1,-1]
         self.i_SamplingRate = i_SamplingRate
   
   # Function to generate a unique serial number with the format: SensorType_Location_S000X
@@ -101,41 +67,66 @@ class Sensor:
     next_serial_number = f"{self.s_SensorType}_{self.s_Location}_S{max_last_number + 1:04d}"
     return next_serial_number
   
+  # Function that returns the sensor type
   def get_type(self):
-     return self.s_SensorType
+    return self.s_SensorType
+  
+  # Function to return the value of the sensor at a given timestamp
+  def get_value(self, s_Timestamp, s_SensorPath):
+    try:
+        s_DataPath = f"/{self.s_SensorType.lower()}data" # data table path based on type of sensor
+        data_ref = db.reference(s_DataPath) # access data table
+        time_query = data_ref.order_by_child('timestamp').equal_to(s_Timestamp).get() # query by timestamps
+        timestamp = ''  # default variables
+        value = None # default variables
 
-  def get_value(self, t0=""):
-    file_path = "C:/Users/olivi/Desktop/Fall_2023/SWE4103/Project/S" + self.s_SerialNumber[-4:] + ".csv" # read file at this location (simulated data)
-    with open(file_path, "r") as file:
-      if t0 == '':
-        t, sn, d, val = file.readlines()[-1].split(',')
-      else:
-        for line in file.readlines():
-          if line.split(',')[0].split()[1] == t0:
-            t, sn, d, val = line.split(',')
-      t = t.split()[1]
-      if val.strip() == 'None':
-        val = 0
-        self.set_state(self.lst_States,False,False)
-      else:
-        val = float(val.strip())
-      if self.s_SensorType == 'Energy' and (val < 0 or val > 50):
-          raise_energy_sensor_value_error(val)
-      if self.s_SensorType == 'Water' and (val < 2 or val > 4):
-          raise_water_sensor_value_error(val)
-      self.f_Value = [t, val]
-      self.set_historical_data([t, val]) # setting historical data
-      return(self.f_Value)
-    return "FILE READ ERROR: CANNOT OPEN FILE AT THIS PATH."
-  
-  def set_value(self, new_data, row, col): # for scientist corrections
-    if self.s_SensorType == 'Energy' and (new_data < 0 or new_data > 50):
-        raise_energy_sensor_value_error(new_data)
-    if self.s_SensorType == 'Water' and (new_data < 2 or new_data > 4):
-        raise_water_sensor_value_error(new_data)
-    Sensor.df_HistoricalData.at[row, col] = float(new_data)
-    return Sensor.df_HistoricalData.at[row, col]
-  
+        if time_query: # if the timestamp exists
+            for key in time_query: # loop through simulation table
+                serial_number = time_query[key]['id'] # save the serial number
+                timestamp = time_query[key]['timestamp'] # save the timestamp
+                value = time_query[key]['value'] # save value
+
+            if self.s_SensorType == 'Energy': # if the sensor is Energy type
+                if (value < 0 or value > 50) or (value == -1): # if the value is out of bounds
+                    self.set_state(s_SensorPath, 1) # flag
+                    raise_energy_sensor_value_error(value) # raise error
+                                      
+                if self.s_SensorType == 'Water':
+                    if (value < 2 or value > 4) or (value == -1): # if the value is out of bounds
+                        self.set_state(s_SensorPath, 1) # flag
+                        raise_water_sensor_value_error(value) # raise error
+
+            self.set_state(s_SensorPath, 0) 
+            data_row = {"timestamp": timestamp, "id": serial_number,"value": value}
+            data_ref.push().set(data_row)
+            print(f"Value at '{timestamp}' is: {value}")
+            return timestamp, value
+        else: # no sensor exists or no data
+            print(f"No data found for '{self.s_SerialNumber}' with timestamp: {s_Timestamp}")        
+    except FirebaseError as e:
+        print(f"Firebase Error: {e}")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+  # Function to set the value of the sensor at a specific timestamp in the historical data database
+  def set_value(self, s_Timestamp, f_NewValue): # for scientist corrections
+    try:
+        ref = db.reference(f'/{self.s_SensorType.lower()}data') # reference to sensor table in the database
+        data_query = ref.order_by_child('timestamp').equal_to(s_Timestamp).get() # query by timestamp
+        if data_query:
+            key = list(data_query.keys())[0] # Assuming there's only one entry with the specified timestamp
+            entry = data_query[key]
+            value = entry['value']
+            entry['value'] = f_NewValue
+            print(f"Sensor {self.s_SerialNumber} value {value} changed to {f_NewValue}")
+            ref.child(key).update(entry) # update entry
+        else: # no sensor or data
+            print(f"No data found with timestamp: {s_Timestamp}")
+    except FirebaseError as e:
+        print(f"Firebase Error: {e}") # Error Case: issue with Firebase connection.
+    except Exception as e:
+        print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
+
   # Function to pull the last sampled time stamp from a value that isn't -1 (out of bounds)
   # TO-DO develop functionality to account for all out of bound cases other than incorrect ones
   def get_last_sampled_time(self, s_SensorPath):
@@ -190,7 +181,8 @@ class Sensor:
         print(f"Firebase Error: {e}")
     except Exception as e:
         print(f"An error occurred: {str(e)}")
-
+  
+  # Function that returns all current historical data for sensor
   def get_current_historical_data(self, s_SensorPath):
     try:
         s_DataPath = f"/{(self.s_SensorType).lower()}data"
@@ -219,24 +211,24 @@ class Sensor:
     #  Sensor.df_HistoricalData = pd.concat([Sensor.df_HistoricalData, df], ignore_index=True)
     #return Sensor.df_HistoricalData # output to verify
   
+  # Function to get the current state of the sensor
   def get_state(self, s_Sensorpath):
     try:
         flagged_ref = db.reference(f'{s_SensorPath}') # reference to sensor table in database
         flagged_sensor_data_query = flagged_ref.order_by_child('id').equal_to(self.s_SerialNumber).get() # query by serial number in sensor table
         for key in flagged_sensor_data_query:
           entry = flagged_sensor_data_query[key]['errorflag'] # get entry for sensor in sensor table
-          return print(f"State of '{self.s_SerialNumber}': {entry}")
+          print(f"State of '{self.s_SerialNumber}': {entry}")
+          return entry
     except FirebaseError as e:
         print(f"Firebase Error: {e}") # Error Case: issue with Firebase connection.
     except Exception as e:
         print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
-    
-    #return self.lst_States # returns current states for online/offline and out/in-bounds
   
   # Function to set the state of the sensor system in the s_SensorPath reference point
   def set_state(self, s_SensorPath, i_State):
     try:
-        flagged_ref = db.reference(f'/{s_SensorPath}') # reference to sensor table in database
+        flagged_ref = db.reference(f'{s_SensorPath}') # reference to sensor table in database
         flagged_sensor_data_query = flagged_ref.order_by_child('id').equal_to(self.s_SerialNumber).get() # query by serial number in sensor table
         for key in flagged_sensor_data_query:
           entry = flagged_sensor_data_query[key] # get entry for sensor in sensor table
@@ -254,56 +246,86 @@ class Sensor:
     except Exception as e:
         print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
 
+  # Function to get the sampling rate of the sensor
+  def get_sampling_rate(self, s_SensorPath):
+    try:
+        sensor_ref = db.reference(s_SensorPath) # reference to sensor table in database
+        data_query = sensor_ref.order_by_child('id').equal_to(self.s_SerialNumber).get() # query by serial number in sensor table
+        print(data_query)
+        for key in data_query:
+          entry = data_query[key]['samplingRate'] # get entry for sensor in sensor table
+          print(f"Sampling rate of '{self.s_SerialNumber}': {entry} sec/sample")
+          return entry
+    except FirebaseError as e:
+        print(f"Firebase Error: {e}") # Error Case: issue with Firebase connection.
+    except Exception as e:
+        print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
   
-  def get_sampling_rate(self):
-    return self.i_SamplingRate
-  
-  def set_sampling_rate(self, i_newSamplingRate):
-    self.i_SamplingRate = i_newSamplingRate
-    return self.i_SamplingRate # output to verify
-    i_NumSensors = 5 # Create an unspecfied number of sensors (could be in config file)
-    lst_Sensors = []
-    for i in range(i_NumSensors):
-        s_SensorType = "Water"  # Replace with the type of sensor
-        s_Location = "Field_1"  # Replace with the location
-        i_SamplingRate = 15 # Water samples once every 15 seconds
-        sensor = Sensor(s_SensorType, s_Location, i_SamplingRate)
-        lst_Sensors.append(sensor)
+  # Function that sets the sensor's sampling rate
+  def set_sampling_rate(self, i_NewSamplingRate, s_SensorPath):
+    try:
+        ref = db.reference(f'{s_SensorPath}') # reference to sensor table in database
+        data_query = ref.order_by_child('id').equal_to(self.s_SerialNumber).get() # query by serial number in sensor table
+        for key in data_query:
+          entry = data_query[key] # get entry for sensor in sensor table
+          entry['samplingRate'] = i_NewSamplingRate
+          ref.child(key).update(entry) # update entry
+          print(f"Sensor {self.s_SerialNumber} sampling rate changed to {i_NewSamplingRate}")
+    except FirebaseError as e:
+        print(f"Firebase Error: {e}") # Error Case: issue with Firebase connection.
+    except Exception as e:
+        print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
 
-    lst_Sensors2 = []
-    Sensor.i_NumObjects = 0
+############# ERROR FUNCTIONS ###################
 
-    for i in range(i_NumSensors):
-        s_SensorType2 = "Energy"  # Replace with the type of sensor
-        s_Location2 = "Field_2"  # Replace with the location
-        i_SamplingRate = 1 # Energy samples once every 1 second
-        sensor2 = Sensor(s_SensorType2, s_Location2, i_SamplingRate)
-        lst_Sensors2.append(sensor2)
+class WaterSensorValueError(Exception):
+    min_wv = 2
+    max_wv = 4
 
-    print("----------TEST CASES----------")
-    for i in range(0,15):
-      file_path = "C:/Users/olivi/Desktop/Fall_2023/SWE4103/Project/S0001.csv"
-      with open(file_path, "r") as file:
-        t, sn, d, val = file.readlines()[i].split(',')
-        t = t.split()[1]
-      for sensor in lst_Sensors2:
-        sensor.get_value(t)
-        sensor.get_last_sampled_time()
-    sensor.set_value(3, 0, 'S'+sensor.s_SerialNumber[-4:])
-    print(Sensor.df_HistoricalData)
-    print("------------------------------")
+    def __init__(self, f,  *args):
+        super().__init__(args)
+        self.f = f
 
-    sensor = lst_Sensors2[0] # pulling one sensor for testing
+    def __str__(self):
+        return f'{self.f} is not in the valid range {self.min_wv, self.max_wv}'
 
-    print("----------TEST CASES----------")
-    print(f"sensor.get_state()\t{sensor.get_state()}")
-    print(f"sensor.set_state()\t{sensor.set_state(sensor.lst_States, b_isOnline=True, b_isOutOfBounds=True)}")
-    print(f"sensor.get_state()\t{sensor.get_state()}")
-    print("------------------------------")
-    print(f"sensor.get_sampling_rate()\t{sensor.get_sampling_rate()}")
-    print(f"sensor.set_sampling_rate()\t{sensor.set_sampling_rate(i_newSamplingRate=3)}") # set new sampling rate to 3 seconds
-    print(f"sensor.get_sampling_rate()\t{sensor.get_sampling_rate()}")
-    print("------------------------------")
+def raise_water_sensor_value_error(val):
+    raise WaterSensorValueError(val)
+
+class EnergySensorValueError(Exception):
+    min_ev = 0
+    max_ev = 50
+    
+    def __init__(self, f,  *args):
+        super().__init__(args)
+        self.f = f
+
+    def __str__(self):
+        return f'{self.f} is not in the valid range {self.min_ev, self.max_ev}'
+
+def raise_energy_sensor_value_error(val):
+    raise EnergySensorValueError(val)
+
+class CustomErrorMessage(Exception):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+def energy_sensor_error_msg():
+    error_message = "Energy sensor value is out of bounds."
+    raise CustomErrorMessage(error_message)
+
+def water_sensor_error_msg():
+    error_message = "Water sensor value is out of bounds."
+    raise CustomErrorMessage(error_message)
+
+def negative_error_msg():
+    error_message = "Sensor value can not be a negative."
+    raise CustomErrorMessage(error_message)
+
+############# END: ERROR FUNCTIONS ##############
+
+################### FUNCTIONS ###################
 
 # Function to create sensor objects and push default information
 def createSensor(s_SensorType, s_Location, i_SamplingRate):
@@ -326,8 +348,8 @@ def getSensor(s_SerialNumber, s_SensorPath):
     sensor_data = ref.order_by_child('id').equal_to(s_SerialNumber).get() # query by the serial number
     if sensor_data: # if sensor exists
         sensor_key = list(sensor_data.keys())[0] # gets key for sensor
-        print("Sensor data:", sensor_data[sensor_key]) # pulls sensor by key
         x = sensor_data[sensor_key] # variable to hold sensor data
+        print("Sensor data:", x) # pulls sensor by key
         sensor = Sensor(x['type'], s_Location, x['samplingRate'], s_SerialNumber)  # Use the sensor data directly 
         return sensor # object that can be manipulated
     else: # sensor doesn't exist
@@ -360,17 +382,25 @@ def deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, s_SerialN
     except Exception as e:
         print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
 
+############### END: FUNCTIONS ###################
+
 def main():
-    #sensor = createSensor("Water", "Test", 15)
-    sensor = getSensor("Water_HydroElectricDam_S0001", s_SensorPath)
-    #deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, "Water_Test_S0003")
+    serial_number_parts = s_SerialNumber.split("_")
+    #sensor = createSensor(serial_number_parts[0], serial_number_parts[1], i_SamplingRate)
+    #sensor = getSensor(s_SerialNumber, s_SensorPath)
+    sensor = getSensor("Water_Field_2_S0001", s_SensorPath)
+
+    #deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, "Water_Field_2_S0002")
 
     #sensor.get_current_historical_data(s_SensorPath)
     #sensor.get_last_sampled_time(s_SensorPath) # testing function
     #sensor.set_state(s_SensorPath, 0) # testing function
-    sensor.get_state(s_SensorPath)
-    
-    
+    #sensor.get_state(s_SensorPath)
+    #sensor.get_sampling_rate(s_SensorPath)
+    #sensor.set_value("2023-10-26 12:56:11", 3.333)
+    #sensor.get_value("2023-10-26 01:30:31", s_SensorPath)
+    #sensor.get_type(s_SensorPath)
 
+    
 if __name__ == "__main__":
     main()
