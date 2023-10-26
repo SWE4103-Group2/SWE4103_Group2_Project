@@ -4,13 +4,14 @@ import time
 import random
 from random import randint
 i_SamplingRate = 1
-s_DataDirectory = "C:/Users/olivi/Desktop/Fall_2023/SWE4103/Project"
+s_DataDirectory = "/Users/briannaorr/Documents/GitHub/SWE4103_Group2_Project/Files"
 s_TimeFormat = "%Y-%m-%d %H:%M:%S"
 s_TimeZone = "Atlantic"
 i_DataRetentionMonths = 3
 i_NumFiles = 5
 f_RangeMin = 0.0
 f_RangeMax = 50.0
+
 def generate_sensor_data():
     if randint(0, 100) < 99.9:  # 99.9% chance of valid data
         return random.uniform(f_RangeMin, f_RangeMax) # return a value in a set range (can be made configurable) assumed float
@@ -37,6 +38,7 @@ def purge_old_data():
             lines = [line for line in lines if line.strip().split(",")[0] >= three_months_ago_timestamp]
         with open(file_path, "w") as file:
             file.writelines(lines)
+
 last_seen = None
 for i in range(0,16):
     for i in range(1, i_NumFiles+1):

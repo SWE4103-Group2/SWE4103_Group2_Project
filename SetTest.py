@@ -11,8 +11,6 @@ default_app = firebase_admin.initialize_app(cred_obj, {
 ref = db.reference("/energydata")
 
 
-
-
 def main():
     
     telem = ref.get()
