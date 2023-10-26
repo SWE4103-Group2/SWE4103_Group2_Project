@@ -194,17 +194,17 @@ class Sensor:
   def get_current_historical_data(self, s_SensorPath):
     try:
         s_DataPath = f"/{(self.s_SensorType).lower()}data"
-        data_ref = db.reference(s_DataPath)
-        sensor_ref = db.reference(s_SensorPath)
+        data_ref = db.reference(s_DataPath) # access data table
+        sensor_ref = db.reference(s_SensorPath) # access sensor table
 
-        query_result = data_ref.order_by_child("id").equal_to(self.s_SerialNumber).get()
-        if query_result:
-            i = 0
-            for item_key in query_result:
+        query_result = data_ref.order_by_child("id").equal_to(self.s_SerialNumber).get() # query by serial number in data table
+        if query_result: # if serial number exists
+            i = 0 # for counting purposes adds an index beginning at 1
+            for item_key in query_result: # return entries
                 i = i + 1
-                print(f"{i}: {query_result[item_key]}")
+                print(f"{i}: {query_result[item_key]}") 
 
-        if not query_result:
+        if not query_result: # no exisiting entries for sensor
             print(f"Sensor with serial number '{self.s_SerialNumber}' does not have data.") # Error Case: serial number doesn't exist.
     except FirebaseError as e:
         print(f"Firebase Error: {e}") # Error Case: issue with Firebase connection.
@@ -224,19 +224,19 @@ class Sensor:
   
   # Function to set the state of the sensor system in the s_SensorPath reference point
   def set_state(self, s_SensorPath, i_State):
-    flagged_ref = db.reference(f'/{s_SensorPath}')
-    flagged_sensor_data_query = flagged_ref.order_by_child('id').equal_to(self.s_SerialNumber).get()
+    flagged_ref = db.reference(f'/{s_SensorPath}') # reference to sensor table in database
+    flagged_sensor_data_query = flagged_ref.order_by_child('id').equal_to(self.s_SerialNumber).get() # query by serial number in sensor table
     for key in flagged_sensor_data_query:
-      entry = flagged_sensor_data_query[key]
-      if i_State == 1:
-        entry['errorflag'] = 1
+      entry = flagged_sensor_data_query[key] # get entry for sensor in sensor table
+      if i_State == 1: # want to flag sensor?
+        entry['errorflag'] = 1 # flag it!
         print(f"Sensor {self.s_SerialNumber} state changed. {self.s_SerialNumber} is out of bounds.")
-      elif i_State == 0:
-        entry['errorflag'] = 0
+      elif i_State == 0: # want to resolve sensor?
+        entry['errorflag'] = 0 # remove flag!
         print(f"Sensor {self.s_SerialNumber} state changed. {self.s_SerialNumber} is within bounds.")
       else:
         return print(f"Error: Incorrect State Type, must be 1 or 0")
-      flagged_ref.child(key).update(entry)
+      flagged_ref.child(key).update(entry) # update entry
   
   def get_sampling_rate(self):
     return self.i_SamplingRate
@@ -290,63 +290,62 @@ class Sensor:
 
 # Function to create sensor objects and push default information
 def createSensor(s_SensorType, s_Location, i_SamplingRate):
-    sensor = Sensor(s_SensorType, s_Location, i_SamplingRate)
-    serial_number = sensor.generate_serial_number()
-    ref = db.reference(s_SensorPath)
+    sensor = Sensor(s_SensorType, s_Location, i_SamplingRate) # create a new sensor 
+    serial_number = sensor.generate_serial_number() # generate serial number
+    ref = db.reference(s_SensorPath) # access sensor table
     ref.child(serial_number).set({
         'errorflag': 0, # assume no issues upon instantiation
         'id': serial_number,
         'type': sensor.get_type(),
         'samplingRate': i_SamplingRate
-    })
-    return sensor
+    }) # set default values
+    return sensor # return new sensor
 
 # Function to return Sensor Object from database and allows use of sensor functionality
 def getSensor(s_SerialNumber, s_SensorPath):
-    ref = db.reference(s_SensorPath)
+    ref = db.reference(s_SensorPath) # access sensor table
     serial_number_parts = s_SerialNumber.split("_")
-    s_Location = serial_number_parts[1]
-    sensor_data = ref.order_by_child('id').equal_to(s_SerialNumber).get()
-
-    if sensor_data:
-        sensor_key = list(sensor_data.keys())[0]
-        print("Sensor data:", sensor_data[sensor_key])
-        x = sensor_data[sensor_key]
-        sensor = Sensor(x['type'], s_Location, x['samplingRate'], s_SerialNumber)  # Use the sensor data directly
-        return sensor
-    else:
+    s_Location = serial_number_parts[1] # get location from serial number
+    sensor_data = ref.order_by_child('id').equal_to(s_SerialNumber).get() # query by the serial number
+    if sensor_data: # if sensor exists
+        sensor_key = list(sensor_data.keys())[0] # gets key for sensor
+        print("Sensor data:", sensor_data[sensor_key]) # pulls sensor by key
+        x = sensor_data[sensor_key] # variable to hold sensor data
+        sensor = Sensor(x['type'], s_Location, x['samplingRate'], s_SerialNumber)  # Use the sensor data directly 
+        return sensor # object that can be manipulated
+    else: # sensor doesn't exist
         print(f"Sensor '{s_SerialNumber}' not found.")
 
 # Function to delete the sensor by s_SerialNumber from the DB.
 def deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, s_SerialNumber):
     try:
         serial_number_parts = s_SerialNumber.split("_")
-        s_DataPath = f"/{(serial_number_parts[0]).lower()}data"
+        s_DataPath = f"/{(serial_number_parts[0]).lower()}data" # establish table path
         data_ref = db.reference(s_DataPath)
-        sensor_ref = db.reference(s_SensorPath)
+        sensor_ref = db.reference(s_SensorPath) # access sensor table
 
-        query_result = data_ref.order_by_child("id").equal_to(s_SerialNumber).get()
-        if query_result:
+        query_result = data_ref.order_by_child("id").equal_to(s_SerialNumber).get() # query by serial number in data table
+        if query_result: # if sensor exists
             for item_key in query_result.keys():
-                data_ref.child(item_key).delete()
+                data_ref.child(item_key).delete() # delete all entries from data table
             print(f"Sensors with serial number '{s_SerialNumber}' deleted from '{s_DataPath}' successfully.")
 
-        query_result_sensor = sensor_ref.order_by_child("id").equal_to(s_SerialNumber).get()
+        query_result_sensor = sensor_ref.order_by_child("id").equal_to(s_SerialNumber).get() # query by serial number in sensor table
         if query_result_sensor:
             for item_key_sensor in query_result_sensor.keys():
-                sensor_ref.child(item_key_sensor).delete()
+                sensor_ref.child(item_key_sensor).delete() # delete entry from sensor table
             print(f"Sensors with serial number '{s_SerialNumber}' deleted from 'sensors' successfully.")
         
-        if not query_result and not query_result_sensor:
+        if not query_result and not query_result_sensor: # no sensor or entries
             print(f"Sensor with serial number '{s_SerialNumber}' does not exist.") # Error Case: serial number doesn't exist.
-    except FirebaseError as e:
+    except FirebaseError as e: # firebase issue
         print(f"Firebase Error: {e}") # Error Case: issue with Firebase connection.
     except Exception as e:
         print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
 
 def main():
     #sensor = createSensor("Water", "Test", 15)
-    sensor = getSensor("Water_Test_S0001", s_SensorPath)
+    sensor = getSensor("Water_Pond_0002", s_SensorPath)
     #sensor.get_current_historical_data(s_SensorPath)
     #print(sensor.s_SerialNumber)
     #sensor.get_last_sampled_time(s_SensorPath) # testing function
