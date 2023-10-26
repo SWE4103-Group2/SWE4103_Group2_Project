@@ -1,10 +1,6 @@
 import datetime
 import time
 import random
-# pip install firebase_admin
-import firebase_admin
-from firebase_admin import db
-from random import randint
 
 i_SamplingRate = 1
 s_TimeFormat = "%Y-%m-%d %H:%M:%S"
@@ -14,6 +10,11 @@ i_NumFiles = 5
 f_RangeMin = 0.0
 f_RangeMax = 50.0
 serial_number = "abc123"
+
+# pip install firebase_admin
+import firebase_admin
+from firebase_admin import db
+from random import randint
 
 # firebase
 ref = ""
@@ -51,7 +52,7 @@ def update_data_file(s_SerialNumber, i_DataValue):
         ref.push().set(key)
 
 def main():
-    lst_serial_numbers = ["Water_Group2_S0001"]
+    lst_serial_numbers = ["Water_Test_S0001"]
     last_seen = None
     #while True:
     for i in range(0,16): # print 16 values for 3 sensors

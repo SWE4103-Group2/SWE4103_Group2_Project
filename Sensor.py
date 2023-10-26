@@ -191,16 +191,33 @@ class Sensor:
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
-  def get_current_historical_data(self):
-    return Sensor.df_HistoricalData
-  
-  def set_historical_data(self, val):
-    if len(Sensor.df_HistoricalData) > 0 and val[0] in Sensor.df_HistoricalData['t'].values:
-      Sensor.df_HistoricalData.loc[Sensor.df_HistoricalData['t'] == val[0], 'S'+self.s_SerialNumber[-4:]] = val[1]
-    else:
-      df = pd.DataFrame({'t':[val[0]], ('S'+self.s_SerialNumber[-4:]):[val[1]]})
-      Sensor.df_HistoricalData = pd.concat([Sensor.df_HistoricalData, df], ignore_index=True)
-    return Sensor.df_HistoricalData # output to verify
+  def get_current_historical_data(self, s_SensorPath):
+    try:
+        s_DataPath = f"/{(self.s_SensorType).lower()}data"
+        data_ref = db.reference(s_DataPath)
+        sensor_ref = db.reference(s_SensorPath)
+
+        query_result = data_ref.order_by_child("id").equal_to(self.s_SerialNumber).get()
+        if query_result:
+            i = 0
+            for item_key in query_result:
+                i = i + 1
+                print(f"{i}: {query_result[item_key]}")
+
+        if not query_result:
+            print(f"Sensor with serial number '{self.s_SerialNumber}' does not have data.") # Error Case: serial number doesn't exist.
+    except FirebaseError as e:
+        print(f"Firebase Error: {e}") # Error Case: issue with Firebase connection.
+    except Exception as e:
+        print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
+
+  #def set_historical_data(self, val):
+    #if len(Sensor.df_HistoricalData) > 0 and val[0] in Sensor.df_HistoricalData['t'].values:
+    #  Sensor.df_HistoricalData.loc[Sensor.df_HistoricalData['t'] == val[0], 'S'+self.s_SerialNumber[-4:]] = val[1]
+    #else:
+    #  df = pd.DataFrame({'t':[val[0]], ('S'+self.s_SerialNumber[-4:]):[val[1]]})
+    #  Sensor.df_HistoricalData = pd.concat([Sensor.df_HistoricalData, df], ignore_index=True)
+    #return Sensor.df_HistoricalData # output to verify
   
   def get_state(self):
     return self.lst_States # returns current states for online/offline and out/in-bounds
@@ -304,7 +321,7 @@ def getSensor(s_SerialNumber, s_SensorPath):
 def deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, s_SerialNumber):
     try:
         serial_number_parts = s_SerialNumber.split("_")
-        s_DataPath = F"/{(serial_number_parts[0]).lower()}data"
+        s_DataPath = f"/{(serial_number_parts[0]).lower()}data"
         data_ref = db.reference(s_DataPath)
         sensor_ref = db.reference(s_SensorPath)
 
@@ -328,12 +345,13 @@ def deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, s_SerialN
         print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
 
 def main():
-    #sensor = createSensor("Water", "Group2", 15)
-    sensor = getSensor("Water_Group2_S0005", s_SensorPath)
+    #sensor = createSensor("Water", "Test", 15)
+    sensor = getSensor("Water_Test_S0001", s_SensorPath)
+    #sensor.get_current_historical_data(s_SensorPath)
     #print(sensor.s_SerialNumber)
-    sensor.get_last_sampled_time(s_SensorPath) # testing function
+    #sensor.get_last_sampled_time(s_SensorPath) # testing function
     #sensor.set_state(s_SensorPath, 0) # testing function
-    #deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, "Water_Group2_S0002")
+    #deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, "Water_Test_S0003")
 
 if __name__ == "__main__":
     main()
