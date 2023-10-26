@@ -219,24 +219,41 @@ class Sensor:
     #  Sensor.df_HistoricalData = pd.concat([Sensor.df_HistoricalData, df], ignore_index=True)
     #return Sensor.df_HistoricalData # output to verify
   
-  def get_state(self):
-    return self.lst_States # returns current states for online/offline and out/in-bounds
+  def get_state(self, s_Sensorpath):
+    try:
+        flagged_ref = db.reference(f'{s_SensorPath}') # reference to sensor table in database
+        flagged_sensor_data_query = flagged_ref.order_by_child('id').equal_to(self.s_SerialNumber).get() # query by serial number in sensor table
+        for key in flagged_sensor_data_query:
+          entry = flagged_sensor_data_query[key]['errorflag'] # get entry for sensor in sensor table
+          return print(f"State of '{self.s_SerialNumber}': {entry}")
+    except FirebaseError as e:
+        print(f"Firebase Error: {e}") # Error Case: issue with Firebase connection.
+    except Exception as e:
+        print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
+    
+    #return self.lst_States # returns current states for online/offline and out/in-bounds
   
   # Function to set the state of the sensor system in the s_SensorPath reference point
   def set_state(self, s_SensorPath, i_State):
-    flagged_ref = db.reference(f'/{s_SensorPath}') # reference to sensor table in database
-    flagged_sensor_data_query = flagged_ref.order_by_child('id').equal_to(self.s_SerialNumber).get() # query by serial number in sensor table
-    for key in flagged_sensor_data_query:
-      entry = flagged_sensor_data_query[key] # get entry for sensor in sensor table
-      if i_State == 1: # want to flag sensor?
-        entry['errorflag'] = 1 # flag it!
-        print(f"Sensor {self.s_SerialNumber} state changed. {self.s_SerialNumber} is out of bounds.")
-      elif i_State == 0: # want to resolve sensor?
-        entry['errorflag'] = 0 # remove flag!
-        print(f"Sensor {self.s_SerialNumber} state changed. {self.s_SerialNumber} is within bounds.")
-      else:
-        return print(f"Error: Incorrect State Type, must be 1 or 0")
-      flagged_ref.child(key).update(entry) # update entry
+    try:
+        flagged_ref = db.reference(f'/{s_SensorPath}') # reference to sensor table in database
+        flagged_sensor_data_query = flagged_ref.order_by_child('id').equal_to(self.s_SerialNumber).get() # query by serial number in sensor table
+        for key in flagged_sensor_data_query:
+          entry = flagged_sensor_data_query[key] # get entry for sensor in sensor table
+          if i_State == 1: # want to flag sensor?
+            entry['errorflag'] = 1 # flag it!
+            print(f"Sensor {self.s_SerialNumber} state changed. {self.s_SerialNumber} is out of bounds.")
+          elif i_State == 0: # want to resolve sensor?
+            entry['errorflag'] = 0 # remove flag!
+            print(f"Sensor {self.s_SerialNumber} state changed. {self.s_SerialNumber} is within bounds.")
+          else:
+            return print(f"Error: Incorrect State Type, must be 1 or 0")
+          flagged_ref.child(key).update(entry) # update entry
+    except FirebaseError as e:
+        print(f"Firebase Error: {e}") # Error Case: issue with Firebase connection.
+    except Exception as e:
+        print(f"An error occurred: {str(e)}") # Error Case: not all sensors were deleted successfully, type error, etc.
+
   
   def get_sampling_rate(self):
     return self.i_SamplingRate
@@ -345,12 +362,15 @@ def deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, s_SerialN
 
 def main():
     #sensor = createSensor("Water", "Test", 15)
-    sensor = getSensor("Water_Pond_0002", s_SensorPath)
+    sensor = getSensor("Water_HydroElectricDam_S0001", s_SensorPath)
+    #deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, "Water_Test_S0003")
+
     #sensor.get_current_historical_data(s_SensorPath)
-    #print(sensor.s_SerialNumber)
     #sensor.get_last_sampled_time(s_SensorPath) # testing function
     #sensor.set_state(s_SensorPath, 0) # testing function
-    #deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, "Water_Test_S0003")
+    sensor.get_state(s_SensorPath)
+    
+    
 
 if __name__ == "__main__":
     main()
