@@ -1,7 +1,12 @@
 {
     "s_ServiceAccountKeyPath": "C:/Users/olivi/Downloads/swe4103-db-firebase-adminsdk-jq4dv-e4128ec05e.json",
     "s_DatabaseURL": "https://swe4103-db-default-rtdb.firebaseio.com/",
-    "s_EnergyDataPath": "/energydata",
     "s_SensorPath": "/sensors",
-    "s_SerialNumber": "S0002"
+    "s_DataPath": "/waterdata",
+    "s_SerialNumber": "Water_Field_2_S0001",
+    "i_SamplingRate": 1,
+    "s_TimeFormat": "%Y-%m-%d %H:%M:%S",
+    "s_TimeZone": "Atlantic",
+    "f_RangeMin": 2.0,
+    "f_RangeMax": 4.0
 }
