@@ -1,2 +1,17 @@
+<<<<<<< Updated upstream
 {
 }
+=======
+{
+    "s_ServiceAccountKeyPath": "/Users/briannaorr/Documents/Github/SWE4103_Group2_Project/swe4103-db-firebase-adminsdk-jq4dv-e4128ec05e.json",
+    "s_DatabaseURL": "https://swe4103-db-default-rtdb.firebaseio.com/",
+    "s_SensorPath": "/sensors",
+    "s_DataPath": "/waterdata",
+    "s_SerialNumber": "Water_Field_2_S0001",
+    "i_SamplingRate": 1,
+    "s_TimeFormat": "%Y-%m-%d %H:%M:%S",
+    "s_TimeZone": "Atlantic",
+    "f_RangeMin": 2.0,
+    "f_RangeMax": 4.0
+}
+>>>>>>> Stashed changes
