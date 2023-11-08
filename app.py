@@ -2,6 +2,7 @@ from Sensor import getSensor,sensor_to_dict,sensors_to_dict,deleteSensor, Sensor
 from flask import Flask, request, json, jsonify
 
 
+
 s_ConfigFilePath = '/Users/briannaorr/Documents/Github/SWE4103_Group2_Project/config.json'
 
 ################### CONFIGURATION ###################
@@ -27,7 +28,7 @@ def sensors():
         return sensors_to_dict(s_SensorPath), 200
     return "Sensors not found.", 404
     
-@app.route("/Sensors/<s_SerialNumber>", methods= ['GET', 'DELETE', 'PATCH'])
+@app.route("/Sensors/<s_SerialNumber>", methods= ['GET', 'DELETE', 'PATCH', 'POST'])
 def sensor(s_SerialNumber):
     if request.method == 'GET':
         if isinstance(getSensor(s_SerialNumber,s_SensorPath), Sensor):
@@ -46,11 +47,13 @@ def sensor(s_SerialNumber):
         if isinstance(getSensor(s_SerialNumber,s_SensorPath), Sensor):
             #assumming data is received in json format
             data = request.get_json()
+            print(data)
             s_Timestamp = data['timestamp']
             f_NewValue = data['value']
             getSensor(s_SerialNumber,s_SensorPath).set_value(s_Timestamp, f_NewValue)
         else:
             return s_SerialNumber + " not found.", 404
+    
 
 
 

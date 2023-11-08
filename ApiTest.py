@@ -6,7 +6,7 @@ test_sensor_2 = "Sensors/Water_LakeHuron_S0001"
 
 data = {
         "timestamp": "2023-10-26 21:38:38" , 
-        "value": "2.5" 
+        "value": "3.14" 
     }
 
 def get_sensors_test(): 
