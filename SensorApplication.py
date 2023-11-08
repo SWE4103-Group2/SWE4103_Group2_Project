@@ -344,7 +344,7 @@ def deleteSensor(s_SerialNumber):
     except mysql.connector.Error as e:
         print(f"Error deleting record: {e}")
     
-# Function that returns all current historical data for sensor, removing from sensor class since the sensor does not have to exist for their to be historical data 
+# Function that returns all current historical data for sensor, removing from sensor class since the sensor does not have to exist for there to be historical data 
 def get_current_historical_data(s_SerialNumber):
     try: 
         select_query = "SELECT timestamp, val  FROM value WHERE serialnum = %s"
