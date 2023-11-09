@@ -15,9 +15,12 @@ import json
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
+# pip install mysql-connector-python
+import mysql.connector
+
 ############### END: BASIC IMPORTS ##################
 
-s_ConfigFilePath = 'C:/Users/olivi/Desktop/Fall_2023/SWE4103/Project/config.json'
+s_ConfigFilePath = '/Users/briannaorr/Documents/Github/SWE4103_Group2_Project/config.json'
 
 ################### CONFIGURATION ###################
 with open(s_ConfigFilePath, 'r') as config_file:
@@ -36,9 +39,15 @@ f_RangeMax                = config["f_RangeMax"]
 ############## END: CONFIGURATION ###################
 
 # Initialize Database Connections
-ref = ""
-cred = credentials.Certificate(s_ServiceAccountKeyPath)
-firebase_admin.initialize_app(cred, {'databaseURL': s_DatabaseURL})
+config = {
+    'user': 'swegrp2',
+    'password': 'D@tabase',
+    'host': 'group2server.mysql.database.azure.com',
+    'database': 'sweprojectdb',
+}
+
+conn = mysql.connector.connect(**config)
+cursor = conn.cursor()
 
 # Function to generate simulated sensor data
 def generate_sensor_data():
@@ -48,30 +57,30 @@ def generate_sensor_data():
     else:
         return -1 # equivalent to null
     
-# Function to update the data file
-def update_data_file(s_SerialNumber, i_DataValue):
+# Function to update the database
+def update_database(s_SerialNumber, i_DataValue):
     now = datetime.datetime.now() # get current time
     timestamp = now.strftime(s_TimeFormat) # make current time into timestamp
-    lst_toAdd = []
+    select_query = "SELECT id FROM sensor WHERE serialnumber = %s"
 
-    data_row = {"timestamp": timestamp, "id": s_SerialNumber, "value": i_DataValue}
-
-    lst_toAdd.append(data_row)
-    
-    ref = db.reference(s_DataPath) # re-directs
-    for key in lst_toAdd:
-        ref.push().set(key)
-
+    cursor.execute(select_query, (s_SerialNumber,))
+    sensor_id = cursor.fetchone()
+    if sensor_id != None:
+        sensor_id = sensor_id[0]
+        insert_query = "INSERT INTO value (sensorid, val, timestamp, serialnum) VALUES (%s, %s, %s, %s)"
+        values = (sensor_id, i_DataValue, timestamp, s_SerialNumber)
+        cursor.execute(insert_query, values)
+        conn.commit()
+    else:
+        print("Could not update database.")
+      
 def main():
-    lst_serial_numbers = [f"{s_SerialNumber}"]
-    last_seen = None
-    #while True:
-    for i in range(0,16): # print 16 values for 3 sensors
+    lst_serial_numbers = ["Water_LakeHuron_S0003"]
+    for i in range(0,5): # generate 5 values for sensors in list
         for serialNum in lst_serial_numbers: # to get name of file
             data_value = generate_sensor_data() # Simulate sensor data generation
-            update_data_file(serialNum, data_value)
+            update_database(serialNum, data_value)
         time.sleep(i_SamplingRate) # Wait for the next sampling interval
-
+   
 if __name__ == "__main__":
-    #create_sensor()
     main()
