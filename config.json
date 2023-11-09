@@ -3,7 +3,7 @@
     "s_DatabaseURL": "https://swe4103-db-default-rtdb.firebaseio.com/",
     "s_SensorPath": "/sensors",
     "s_DataPath": "/waterdata",
-    "s_SerialNumber":"Water_Pond_S0006" ,
+    "s_SerialNumber":"Water_LakeHuron_S0003" ,
     "i_SamplingRate": 1,
     "s_TimeFormat": "%Y-%m-%d %H:%M:%S",
     "s_TimeZone": "Atlantic",

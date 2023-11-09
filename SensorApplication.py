@@ -122,6 +122,68 @@ class Sensor:
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
+  def get_last_sampled_time(self):
+    try:
+        select_query = "SELECT timestamp FROM value WHERE serialnum = %s"
+        cursor.execute(select_query, (self.s_SerialNumber,))
+        sensor_data = cursor.fetchall()
+        if sensor_data: # if sensor was sampled
+            data_values = list(sensor_data) # get the timestamps for sampling of sensor
+            data_values.sort(reverse=True) # sort timestamps from the bottom (most recent timestamp/value)
+            
+            most_recent_entry = None # variable to to hold most recent entry
+            for entry in data_values: # loop through each entry in the sorted values to find the first value that is valid (i.e. not NoneType)
+                if entry is not None:
+                    most_recent_entry = entry
+                    break
+
+            if most_recent_entry: # if a most recent entry is found (i.e. has data)
+                print(most_recent_entry)
+                select_query_val = "SELECT  val  FROM value WHERE timestamp = %s"
+
+                
+                most_recent_value = cursor.execute(select_query_val, (datetime.datetime.strptime(str(most_recent_entry[0]), "%Y-%m-%d %H:%M:%S"),)) # 
+                #most_recent_value = most_recent_value .fetchone()[0]
+                print("most_recent_value", most_recent_value)
+                print(datetime.datetime.strptime(str(most_recent_entry[0]), "%Y-%m-%d %H:%M:%S"))
+                if most_recent_value != None:
+                    most_recent_value.fetchone()[0]
+                    if most_recent_value == -1: # if the most recent value is out of bounds... (i.e. -1)
+                        previous_sampled_time = None # variable to hold the previously sampled time
+                        for entry in data_values: # loop through each entry in the sorted values to find the first value that is valid (i.e. not -1)
+                            if entry is not None:
+                                if cursor.execute(select_query_val, (datetime.datetime.strptime(str(entry[0]), "%Y-%m-%d %H:%M:%S"),)).fetchone()[0] != -1:
+                                    select_query_val = "SELECT val FROM value WHERE timestamp  = %s"
+                                    previous_sampled_time = entry
+                                    break
+                    if previous_sampled_time: # if there exists a previously sampled time
+                        expected_time = datetime.datetime.strptime(previous_sampled_time, "%Y-%m-%d %H:%M:%S") + datetime.timedelta(seconds=self.i_SamplingRate) # get the expected time for the last sample
+                        if (most_recent_entry <= (expected_time.strftime("%Y-%m-%d %H:%M:%S"),)): # if the most recent entry is less than the expected sample time
+                            print(f"Error: '{self.s_SerialNumber}' is out of bounds.") # notify
+                            print(f"Last Sampled Time: {previous_sampled_time}") # get the last sampled time
+                            select_query_sensorid = "SELECT sensorid FROM value WHERE serialnum = %s"
+                            sensorid = cursor.execute(select_query_sensorid, (self.s_SerialNumber,))
+                            if sensorid is not None: 
+                                sensorid.fetchone()[0]
+                                #update_query = "UPDATE sensor SET errorflag = %s  WHERE id = %s "
+                                #cursor.execute(update_query, (1,sensorid)).fetchone()[0]
+                            
+                    else: # no previously sampled time
+                        print(f"'{self.s_SerialNumber}' is out of bounds, and no previous entry with a different value was found.")
+                elif most_recent_value is None:
+                    raise ValueError(f"ValueError: Sensor '{self.s_SerialNumber}' does not exist or has a value of None.")
+                else: # no most recent value
+                  last_sampled_time = most_recent_entry
+                  print(f"Last Sampled Time: {last_sampled_time}")
+            else: # no most recent entry
+                raise ValueError(f"ValueError: No valid data found for '{self.s_SerialNumber}'.")
+        else: # no sensor exists
+            raise ValueError(f"ValueError: No data found for '{self.s_SerialNumber}'.")
+    except mysql.connector.Error as e:
+        print(f"Database Connector Error: {e}")
+    except Exception as e:
+        print(f"Error occured getting last time sampled: {e}")
+    
   # Function to set the value of the sensor at a specific timestamp in the historical data database
   def set_value(self, s_Timestamp, f_NewValue): # for scientist corrections
     try:
@@ -143,59 +205,6 @@ class Sensor:
 
   # Function to pull the last sampled time stamp from a value that isn't -1 (out of bounds)
   # TO-DO develop functionality to account for all out of bound cases other than incorrect ones
-  def get_last_sampled_time(self, s_SensorPath):
-    try:
-        print("Sensor Serial Number:", self.s_SerialNumber)
-        s_DataPath = f"/{self.s_SensorType.lower()}data" # go to correct table in database based on sensor type
-        data_ref = db.reference(s_DataPath) # set reference
-        sensor_data_query = data_ref.order_by_child('id').equal_to(self.s_SerialNumber).get() # query by the serial number
-
-        if sensor_data_query: # if sensor exists
-            data_values = list(sensor_data_query.values()) # get the values for that serial number
-            data_values.sort(key=lambda x: x['timestamp'], reverse=True) # sort timestamps from the bottom (most recent timestamp/value)
-            
-            most_recent_entry = None # variable to to hold most recent entry
-            for entry in data_values: # loop through each entry in the sorted values to find the first value that is valid (i.e. not NoneType)
-                if entry.get("value") is not None:
-                    most_recent_entry = entry
-                    break
-
-            if most_recent_entry: # if a most recent entry is found (i.e. has data)
-                most_recent_value = most_recent_entry.get("value") # pull most recent value
-                if most_recent_value == -1: # if the most recent value is out of bounds... (i.e. -1)
-                    previous_sampled_time = None # variable to hold the previously sampled time
-                    for entry in data_values: # loop through each entry in the sorted values to find the first value that is valid (i.e. not -1)
-                        if entry.get("value") != -1:
-                            previous_sampled_time = entry.get("timestamp")
-                            break
-
-                    if previous_sampled_time: # if there exists a previously sampled time
-                        expected_time = datetime.datetime.strptime(previous_sampled_time, "%Y-%m-%d %H:%M:%S") + datetime.timedelta(seconds=self.i_SamplingRate) # get the expected time for the last sample
-                        if ((most_recent_entry.get("timestamp")) <= (expected_time.strftime("%Y-%m-%d %H:%M:%S"))): # if the most recent entry is less than the expected sample time
-                            print(f"Error: '{self.s_SerialNumber}' is out of bounds.") # notify
-                            print(f"Last Sampled Time: {previous_sampled_time}") # get the last sampled time
-                            flagged_ref = db.reference(f'/{s_SensorPath}') # reference the sensor table in the database
-                            flagged_sensor_data_query = flagged_ref.order_by_child('id').equal_to(self.s_SerialNumber).get() # get the sensor
-                            for key in flagged_sensor_data_query: # loop through sensors in sensor table
-                                entry = flagged_sensor_data_query[key] # grab the correct sensor
-                                entry['errorflag'] = 1 # flag it
-                                flagged_ref.child(key).update(entry) # update sensor
-                    else: # no previously sampled time
-                        print(f"'{self.s_SerialNumber}' is out of bounds, and no previous entry with a different value was found.")
-                elif most_recent_value is None:
-                    raise ValueError(f"ValueError: Sensor '{self.s_SerialNumber}' does not exist or has a value of None.")
-                else: # no most recent value
-                  last_sampled_time = most_recent_entry.get("timestamp")
-                  print(f"Last Sampled Time: {last_sampled_time}")
-            else: # no most recent entry
-                raise ValueError(f"ValueError: No valid data found for '{self.s_SerialNumber}' in {s_DataPath}.")
-        else: # no sensor exists
-            raise ValueError(f"ValueError: No data found for '{self.s_SerialNumber}' in {s_DataPath}.")
-    except FirebaseError as e:
-        print(f"Firebase Error: {e}")
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-  
   
   # Function to get the current state of the sensor
   def get_state(self, s_Sensorpath):
@@ -344,46 +353,60 @@ def deleteSensor(s_SerialNumber):
     except mysql.connector.Error as e:
         print(f"Error deleting record: {e}")
     
-# Function that returns all current historical data for sensor, removing from sensor class since the sensor does not have to exist for there to be historical data 
-def get_current_historical_data(s_SerialNumber):
-    try: 
-        select_query = "SELECT timestamp, val  FROM value WHERE serialnum = %s"
-        cursor.execute(select_query, (s_SerialNumber,))
-        sensor_data = cursor.fetchall()
-        if sensor_data: 
-            data = []
-            for row in sensor_data:
-                timestamp, value = row
-                record = {"value": value, "timestamp": str(timestamp)}
-                data.append(record)
-            print(data)
-            return data
-        else:
-            print(f"Sensor with serial number '{s_SerialNumber}' does not have historical data")
-    except mysql.connector.Error as e:
-        print(f"Error grabbing historical data: {e}")
-        return None
+# Function that returns historical data for the sensor specified or all the historical data in the value table
+def get_current_historical_data(s_SerialNumber = None):
+    if s_SerialNumber == None:
+        try: 
+            select_query = "SELECT timestamp, val  FROM value"
+            cursor.execute(select_query)
+            table_data = cursor.fetchall()
+            if table_data: 
+                data = []
+                for row in table_data:
+                    timestamp, value = row
+                    record = {"value": value, "timestamp": str(timestamp)}
+                    data.append(record)
+                print(data)
+                print("Number of records: ", len(data))
+                return data
+            else:
+                print(f"There is no historical data at this time.")
+        except mysql.connector.Error as e:
+            print(f"Error grabbing historical data: {e}")
+            return None
+    else: 
+        try: 
+            select_query = "SELECT timestamp, val  FROM value WHERE serialnum = %s"
+            cursor.execute(select_query, (s_SerialNumber,))
+            sensor_data = cursor.fetchall()
+            if sensor_data: 
+                data = []
+                for row in sensor_data:
+                    timestamp, value = row
+                    record = {"value": value, "timestamp": str(timestamp)}
+                    data.append(record)
+                print(data)
+                print("Number of records: ", len(data))
+                return data
+            else:
+                print(f"Sensor with serial number '{s_SerialNumber}' does not have historical data")
+        except mysql.connector.Error as e:
+            print(f"Error grabbing historical data: {e}")
+            return None
+
+
+    
+  
+
 ############### END: FUNCTIONS ###################
 
 def main():
-    #serial_number_parts = s_SerialNumber.split("_")
-    #sensor = createSensor(serial_number_parts[0], serial_number_parts[1], i_SamplingRate)
-    #sensor = getSensor("Water_Field_2_S0001", s_SensorPath)
+   
     sensor = getSensor(s_SerialNumber)
-
-    #deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, "Water_Field_2_S0002")
-
-    #sensor.get_current_historical_data(s_SensorPath)
-    #sensor.get_last_sampled_time(s_SensorPath) # testing function 
-    #sensor.set_state(s_SensorPath, 0) # testing function
-    #sensor.get_state(s_SensorPath)
-    #sensor.get_sampling_rate(s_SensorPath)
-    #sensor.set_value("2023-10-26 12:56:11", 3.333)
-    #sensor.get_value("2023-10-26 01:30:31", s_SensorPath)
-    #print(sensor.get_type())
     #createSensor('Water', 'River', 1)
     #deleteSensor(s_SerialNumber)
-    get_current_historical_data(s_SerialNumber)
+    #get_current_historical_data(s_SerialNumber)
+    sensor.get_last_sampled_time()
     
 if __name__ == "__main__":
     main()

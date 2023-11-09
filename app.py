@@ -31,14 +31,14 @@ def sensors():
 @app.route("/Sensors/<s_SerialNumber>", methods= ['GET', 'DELETE', 'PATCH', 'POST'])
 def sensor(s_SerialNumber):
     if request.method == 'GET':
-        if isinstance(getSensor(s_SerialNumber,s_SensorPath), Sensor):
-            return sensor_to_dict(getSensor(s_SerialNumber, s_SensorPath)), 200
+        if isinstance(getSensor(s_SerialNumber), Sensor):
+            return sensor_to_dict(getSensor(s_SerialNumber)), 200
         else:
             return s_SerialNumber + " not found.", 404
     
     if request.method == 'DELETE':
-        if isinstance(getSensor(s_SerialNumber,s_SensorPath), Sensor):
-            deleteSensor(s_ServiceAccountKeyPath, s_DatabaseURL, s_SensorPath, s_SerialNumber_delete)
+        if isinstance(getSensor(s_SerialNumber), Sensor):
+            deleteSensor(s_SerialNumber_delete)
             return  s_SerialNumber + " deleted.", 200
         else:
             return s_SerialNumber + " not found.", 404
@@ -50,7 +50,7 @@ def sensor(s_SerialNumber):
             print(data)
             s_Timestamp = data['timestamp']
             f_NewValue = data['value']
-            getSensor(s_SerialNumber,s_SensorPath).set_value(s_Timestamp, f_NewValue)
+            getSensor(s_SerialNumber).set_value(s_Timestamp, f_NewValue)
         else:
             return s_SerialNumber + " not found.", 404
     
