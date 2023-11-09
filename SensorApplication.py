@@ -138,27 +138,21 @@ class Sensor:
         try:
             select_query = "SELECT serialnum, timestamp, val FROM value WHERE serialnum = %s ORDER BY timestamp DESC"  # query to get sensor data sorted by timestamp in descending order
             cursor.execute(select_query, (self.s_SerialNumber,))
-            sensor_data = cursor.fetchall()  # Fetch all data
-            
+            sensor_data = cursor.fetchall()  # fetch all data
             if sensor_data:  # if sensor exists
                 most_recent_entry = None
-                
                 for serial_number, timestamp, value in sensor_data:  # loop through each entry in the sorted values
                     if value is not None:
                         most_recent_entry = {"serial_number": self.s_SerialNumber, "timestamp": str(timestamp), "value": value}
                         break
-
                 if most_recent_entry:  # if a most recent entry is found (i.e., has data)
                     most_recent_value = most_recent_entry["value"]  # pull the most recent value
-
                     if most_recent_value == -1:  # if the most recent value is out of bounds... (i.e., -1)
-                        previous_sampled_time = None  # variable to hold the previously sampled time
-                                        
+                        previous_sampled_time = None  # variable to hold the previously sampled time                
                         for serial_number, timestamp, value in sensor_data:  # loop through each entry in the sorted values
                             if value != -1:
                                 previous_sampled_time = timestamp
                                 break
-                        
                         if previous_sampled_time:  # if there exists a previously sampled time
                             expected_time = datetime.strptime(str(previous_sampled_time), "%Y-%m-%d %H:%M:%S") + timedelta(seconds=self.i_SamplingRate)  # get the expected time for the last sample
                             if most_recent_entry["timestamp"] <= str(expected_time):  # if the most recent entry is less than the expected sample time
@@ -168,7 +162,6 @@ class Sensor:
                                 update_query = "UPDATE sensor SET errorflag = 1 WHERE serialnum = %s"
                                 cursor.execute(update_query, (self.s_SerialNumber,))
                                 conn.commit()
-                              
                         else:  # no previously sampled time
                             print(f"'{self.s_SerialNumber}' is out of bounds, and no previous entry with a different value was found.")
                     elif most_recent_value is None:
@@ -185,7 +178,7 @@ class Sensor:
             print(f"Error grabbing value data: {e}")
         except Exception as e:
             print(f"An error occurred: {str(e)}")
-    
+
     # Function to get the current errorflag of the sensor
     def get_errorflag(self):
         print(self.i_ErrorFlag)
@@ -341,9 +334,6 @@ def main():
     #sensor.get_errorflag()
     
     sensor.get_last_sampled_time()
-
-    
-
     
 if __name__ == "__main__":
     main()
