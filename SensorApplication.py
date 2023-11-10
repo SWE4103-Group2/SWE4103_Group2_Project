@@ -28,16 +28,6 @@ s_ConfigFilePath = 'C:/Users/olivi/Desktop/Fall_2023/Project/config.json'
 with open(s_ConfigFilePath, 'r') as config_file:
     config = json.load(config_file)
 
-s_ServiceAccountKeyPath   = config["s_ServiceAccountKeyPath"]
-s_DatabaseURL             = config["s_DatabaseURL"]
-s_SensorPath              = config["s_SensorPath"]
-s_DataPath                = config["s_DataPath"]
-s_SerialNumber            = config["s_SerialNumber"]
-i_SamplingRate            = config["i_SamplingRate"]
-s_TimeFormat              = config["s_TimeFormat"]
-s_TimeZone                = config["s_TimeZone"]
-f_RangeMin                = config["f_RangeMin"]
-f_RangeMax                = config["f_RangeMax"]
 s_User                    = config["User"]
 s_Password                = config["Password"]
 s_Host                    = config["Host"]
