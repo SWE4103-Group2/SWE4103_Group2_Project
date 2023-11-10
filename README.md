@@ -1,5 +1,4 @@
-# SWE4103_Group2_Project
-
+# SWE4103 Project Group 2
 ## SensorApplication.py
 Application for sensor object and utilities. (NOTE: Connects to MySQL)
 
