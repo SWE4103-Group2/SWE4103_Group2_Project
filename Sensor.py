@@ -24,7 +24,7 @@ from firebase_admin import db
 import unittest
 ############### END: BASIC IMPORTS ##################
 
-s_ConfigFilePath = 'C:/Users/Olivia Rae/Desktop/Fall_2023/SWE4103/Project/config.json'
+s_ConfigFilePath = '/Users/briannaorr/Documents/Github/SWE4103_Group2_Project/config.json'
 
 ################### CONFIGURATION ###################
 with open(s_ConfigFilePath, 'r') as config_file:

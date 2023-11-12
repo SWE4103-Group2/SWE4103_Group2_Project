@@ -22,7 +22,7 @@ import mysql.connector
 import unittest
 ############### END: BASIC IMPORTS ##################
 
-s_ConfigFilePath = 'C:/Users/olivi/Desktop/Fall_2023/Project/config.json'
+s_ConfigFilePath = '/Users/briannaorr/Documents/Github/SWE4103_Group2_Project/config.json'
 
 ################### CONFIGURATION ###################
 with open(s_ConfigFilePath, 'r') as config_file:
@@ -118,10 +118,13 @@ class Sensor:
             cursor.execute(update_query, (f_NewValue, s_Timestamp, self.s_SerialNumber,))
             conn.commit()
             print(f"Sensor '{self.s_SerialNumber}' value updated successfully.")
+            return True
         except mysql.connector.Error as e:
             print(f"MySQL Error: {e}")
+            return False
         except Exception as e:
             print(f"An unexpected error occurred: {str(e)}")
+            return False
 
     # Function to pull the last sampled time stamp from a value that isn't -1 (out of bounds)
     def get_last_sampled_time(self):
@@ -262,11 +265,14 @@ def deleteSensor(s_SerialNumber):
             cursor.execute(delete_query, (s_SerialNumber,))
             conn.commit()
             print(f"Sensor with serial number '{s_SerialNumber}' was deleted successfully.")
+            return True
         else:
             print(f"Sensor with serial number '{s_SerialNumber}' not found in the database, delete query was not executed.")
-            
+            return False
+        
     except mysql.connector.Error as e:
         print(f"Error deleting record: {e}")
+        return False
 
 def getCurrentHistoricalData(s_SerialNumber=None):
     try: 
@@ -280,7 +286,7 @@ def getCurrentHistoricalData(s_SerialNumber=None):
                     serial_number, value, timestamp = row
                     record = {"serialnum": serial_number, "value": value, "timestamp": str(timestamp)}
                     data.append(record)
-                    print(record)
+                    #print(record)
                 return data
             else:
                 print(f"Sensor data does not exist")
@@ -294,7 +300,7 @@ def getCurrentHistoricalData(s_SerialNumber=None):
                     serial_number, timestamp, value = row
                     record = {"serialnum": serial_number, "value": value, "timestamp": str(timestamp)}
                     data.append(record)
-                    print(record)
+                    #print(record)
                 return data
             else:
                 print(f"Sensor with serial number '{s_SerialNumber}' does not have historical data")
@@ -302,12 +308,57 @@ def getCurrentHistoricalData(s_SerialNumber=None):
         print(f"Error grabbing historical data: {e}")
         return None
     
+#Function to return all sensors and its info if a serial number is not specified 
+def get_sensors(s_SerialNumber=None):
+    sensors_info = {}
+    try:
+        cursor.execute("SELECT  serialnumber, type, location, errorflag, status, samplingrate  FROM sensor ORDER BY id DESC")
+        sensors = cursor.fetchall()
+
+        if sensors:
+            for sensor in sensors: 
+                sensor_info = {}
+                serialnumber = sensor[0]
+                sensor_info['serial_number'] = sensor[0]
+                sensor_info['type'] = sensor[1]
+                sensor_info['location'] = sensor[2]
+                sensor_info['errorflag'] = sensor[3]
+                sensor_info['status'] = sensor[4]
+                sensor_info['samplingrate'] = sensor[5]
+                sensor_info['historical_data'] = getCurrentHistoricalData(serialnumber)
+                sensors_info[serialnumber ] = sensor_info
+            
+            if s_SerialNumber is None:
+                #print(sensors_info)
+                return sensors_info
+            else:
+                print(sensor_info)
+                return sensor_info
+        else:
+            print("There are no sensors within the database.")
+            return None
+    except mysql.connector.Error as e:
+        print(f"Error grabbing sensor data: {e}")
+        return None
+
+#Function to return a sensor's data
+def get_sensor(s_SerialNumber):
+    sensors = get_sensors()
+    if s_SerialNumber in sensors:
+        print(get_sensors(s_SerialNumber))
+        return get_sensors(s_SerialNumber)
+    else: 
+        print("None")
+        return None
+
+
+
 ############### END: FUNCTIONS ###################
 
 def main():
 
     #sensor = createSensor(s_SensorType="Water", s_Location="LakeHuron", i_SamplingRate=1)
-    sensor = getSensor(s_SerialNumber="Water_LakeHuron_S0003")
+    #sensor = getSensor(s_SerialNumber="Water_LakeHuron_S0003")
     #deleteSensor(s_SerialNumber="Water_LakeHuron_S0006")
     #getCurrentHistoricalData(s_SerialNumber=None)
 
@@ -323,7 +374,9 @@ def main():
     #sensor.set_errorflag(0)
     #sensor.get_errorflag()
     
-    sensor.get_last_sampled_time()
-    
+    #sensor.get_last_sampled_time()
+    #get_sensors('Water_LakeHuron_S0003')
+
+    get_sensor('Water_LakeHuron_S0003')
 if __name__ == "__main__":
     main()

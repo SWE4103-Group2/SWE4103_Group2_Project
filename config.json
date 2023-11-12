@@ -1,8 +1,10 @@
 {
-    "s_ServiceAccountKeyPath": "C:/Users/olivi/Downloads/swe4103-db-firebase-adminsdk-jq4dv-e4128ec05e.json",
+    "s_ServiceAccountKeyPath": "/Users/briannaorr/Documents/Github/SWE4103_Group2_Project/swe4103-db-firebase-adminsdk-jq4dv-e4128ec05e.json",
     "s_DatabaseURL": "https://swe4103-db-default-rtdb.firebaseio.com/",
-    "lst_SerialNumbers":["Water_LakeHuron_S0002", "Water_LakeHuron_S0003"],
-    "i_SamplingRate": 15,
+    "s_SensorPath": "/sensors",
+    "s_DataPath": "/waterdata",
+    "s_SerialNumber":"Water_Pond_S0006" ,
+    "i_SamplingRate": 1,
     "s_TimeFormat": "%Y-%m-%d %H:%M:%S",
     "s_TimeZone": "Atlantic",
     "f_RangeMin": 2.0,
