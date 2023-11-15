@@ -76,7 +76,7 @@ def update_database(s_SerialNumber, i_DataValue):
     
     
 def main():
-    lst_serial_numbers = ["Water_LakeHuron_S0003"]
+    lst_serial_numbers = ["Energy_UNB_S0023", "Energy_UNBSJ_S0030", "Energy_UNB_S0024" ]
     for i in range(0,5): # generate 5 values for sensors in list
         for serialNum in lst_serial_numbers: # to get name of file
             data_value = generate_sensor_data() # Simulate sensor data generation
