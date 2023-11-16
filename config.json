@@ -3,5 +3,9 @@
     "s_DatabaseURL": "https://swe4103-db-default-rtdb.firebaseio.com/",
     "s_EnergyDataPath": "/energydata",
     "s_SensorPath": "/sensors",
-    "s_SerialNumber": "S0002"
+    "s_SerialNumber": "S0002",
+    "User": "swegrp2",
+    "Password": "D@tabase",
+    "Host": "group2server.mysql.database.azure.com",
+    "DatabasePath": "sweprojectdb"
 }
