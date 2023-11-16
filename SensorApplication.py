@@ -220,8 +220,22 @@ class Sensor:
 
     # Function to get the sampling rate of the sensor
     def get_sampling_rate(self):
-        print(self.i_SamplingRate)
-        return self.i_SamplingRate
+        try:
+           select_query = "SELECT samplingrate FROM sensor WHERE serialnumber = %s"
+           cursor.execute(select_query, (self.s_SerialNumber,))
+           sampling_rate = cursor.fetchone()
+           #check
+           if sampling_rate:
+               self.i_SamplingRate = sampling_rate[0]
+               print(self.i_SamplingRate)
+               return self.i_SamplingRate
+           else:
+               print(f"Unable to find the sampling rate for the sensor '{self.s_SerialNumber}'.")
+               return None
+        except mysql.connector.Error as e:
+            print(f"MySQL error: {e}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {str(e)}")
     
     # Function that sets the sensor's sampling rate
     def set_sampling_rate(self, i_NewSamplingRate):
