@@ -189,8 +189,21 @@ class Sensor:
 
     # Function to get the current status of the sensor
     def get_status(self):
-        print(self.s_Status)
-        return self.s_Status
+        try:
+           select_query = "SELECT status FROM sensor WHERE serialnumber = %s"
+           cursor.execute(select_query, (self.s_SerialNumber,))
+           status = cursor.fetchone()
+           if status:
+               self.s_Status = status[0]
+               print(self.s_Status)
+               return self.s_Status
+           else:
+               print(f"Unable to find the status for the sensor '{self.s_SerialNumber}'.")
+               return None
+        except mysql.connector.Error as e:
+           print(f"MySQL error: {e}")
+        except Exception as e:
+           print(f"An unexpected error occurred: {str(e)}")
     
     # Function to set the status of the sensor system in the s_SensorPath reference point
     def set_status(self, i_NewStatus):
