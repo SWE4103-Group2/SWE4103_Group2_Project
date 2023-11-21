@@ -1,4 +1,3 @@
-
 #####################################################
 '''
    (SensorApplication.py)   OGR
@@ -22,22 +21,12 @@ import mysql.connector
 import unittest
 ############### END: BASIC IMPORTS ##################
 
-s_ConfigFilePath = 'C:/Users/olivi/Desktop/Fall_2023/Project/config.json'
+s_ConfigFilePath = 'config.json'
 
 ################### CONFIGURATION ###################
 with open(s_ConfigFilePath, 'r') as config_file:
     config = json.load(config_file)
 
-s_ServiceAccountKeyPath   = config["s_ServiceAccountKeyPath"]
-s_DatabaseURL             = config["s_DatabaseURL"]
-s_SensorPath              = config["s_SensorPath"]
-s_DataPath                = config["s_DataPath"]
-s_SerialNumber            = config["s_SerialNumber"]
-i_SamplingRate            = config["i_SamplingRate"]
-s_TimeFormat              = config["s_TimeFormat"]
-s_TimeZone                = config["s_TimeZone"]
-f_RangeMin                = config["f_RangeMin"]
-f_RangeMax                = config["f_RangeMax"]
 s_User                    = config["User"]
 s_Password                = config["Password"]
 s_Host                    = config["Host"]
@@ -56,11 +45,11 @@ class Sensor:
     def __init__(self, s_SensorType, s_Location, i_SamplingRate, s_SerialNumber=None):
             self.s_SensorType = s_SensorType
             self.s_Location = s_Location
+            self.i_SamplingRate = i_SamplingRate
             if s_SerialNumber is None:
                 self.s_SerialNumber = self.generate_serial_number()
             else:
                 self.s_SerialNumber = s_SerialNumber
-            self.i_SamplingRate = i_SamplingRate
             self.i_ErrorFlag = 0
             self.s_Status = "ON"
 
@@ -103,7 +92,6 @@ class Sensor:
                         print(f"Value of '{self.s_SerialNumber}' at '{s_Timestamp}' is: {value} KW")
                     else:
                         self.set_errorflag(1)
-                        self.i_ErrorFlag = 1
                         print(f"An unexpected error occurred: unable to set state for '{self.s_SerialNumber}'")
 
                 if self.s_SensorType == 'Water':
@@ -111,7 +99,6 @@ class Sensor:
                         print(f"Value of '{self.s_SerialNumber}' at '{s_Timestamp}' is: {value} L/hour")
                     else:
                         self.set_errorflag(1)
-                        self.i_ErrorFlag = 1
                         print(f"An unexpected error occurred: unable to set state for '{self.s_SerialNumber}'")
                 return serial_number, value
             else:
@@ -122,16 +109,45 @@ class Sensor:
             print(f"An unexpected error occurred: {str(e)}")
 
     # Function to set the value of the sensor at a specific timestamp in the historical data database
-    def set_value(self, s_Timestamp, f_NewValue):
+    def set_value(self, s_NewSensorType=None, s_NewLocation=None, i_NewSamplingRate=None):
         try:
-            update_query = "UPDATE value SET val = %s WHERE timestamp = %s AND serialnum = %s"
-            cursor.execute(update_query, (f_NewValue, s_Timestamp, self.s_SerialNumber,))
-            conn.commit()
-            print(f"Sensor '{self.s_SerialNumber}' value updated successfully.")
+            select_query = "SELECT type, location, samplingrate FROM sensor WHERE serialnumber = %s"
+            cursor.execute(select_query, (self.s_SerialNumber, ))
+            sensor_data = cursor.fetchone()
+            if sensor_data:
+                type, location, samplingrate = sensor_data
+
+            if s_NewSensorType is not None:
+                if (s_NewSensorType.lower() == "water" or s_NewSensorType.lower() == "energy"):
+                    self.s_SensorType = s_NewSensorType
+                    update_query = "UPDATE sensor SET type = %s WHERE serialnumber = %s"
+                    cursor.execute(update_query, (s_NewSensorType.lower(), self.s_SerialNumber))
+                    conn.commit()
+                    print(f"Sensor '{self.s_SerialNumber}' type changed to '{s_NewSensorType.lower()}'")
+                else:
+                    print(f"Error! Incorrect new location type recieved, must be 'Water' or 'Energy'")
+            if s_NewLocation is not None:
+                self.s_Location = s_NewLocation
+                update_query = "UPDATE sensor SET location = %s WHERE serialnumber = %s"
+                cursor.execute(update_query, (s_NewLocation, self.s_SerialNumber))
+                conn.commit()
+                print(f"Sensor '{self.s_SerialNumber}' location changed to {s_NewLocation}")
+            if i_NewSamplingRate is not None:
+                if i_NewSamplingRate >= 1:
+                    self.i_SamplingRate = i_NewSamplingRate
+                    update_query = "UPDATE sensor SET samplingrate = %s WHERE serialnumber = %s"
+                    cursor.execute(update_query, (i_NewSamplingRate, self.s_SerialNumber))
+                    conn.commit()
+                    print(f"Sensor '{self.s_SerialNumber}' sampling rate changed to {i_NewSamplingRate}")
+                else:
+                    print(f"Error! Sampling rate must be a positive integer.")
+
         except mysql.connector.Error as e:
             print(f"MySQL Error: {e}")
+            return False
         except Exception as e:
             print(f"An unexpected error occurred: {str(e)}")
+            return False
 
     # Function to pull the last sampled time stamp from a value that isn't -1 (out of bounds)
     def get_last_sampled_time(self):
@@ -159,9 +175,7 @@ class Sensor:
                                 print(f"Error: '{self.s_SerialNumber}' is out of bounds.")  # notify
                                 print(f"Last Sampled Time: {previous_sampled_time}")  # get the last sampled time
                                 # Update the error flag in the sensor table
-                                update_query = "UPDATE sensor SET errorflag = 1 WHERE serialnum = %s"
-                                cursor.execute(update_query, (self.s_SerialNumber,))
-                                conn.commit()
+                                self.set_errorflag(1)
                         else:  # no previously sampled time
                             print(f"'{self.s_SerialNumber}' is out of bounds, and no previous entry with a different value was found.")
                     elif most_recent_value is None:
@@ -272,11 +286,14 @@ def deleteSensor(s_SerialNumber):
             cursor.execute(delete_query, (s_SerialNumber,))
             conn.commit()
             print(f"Sensor with serial number '{s_SerialNumber}' was deleted successfully.")
+            return True
         else:
             print(f"Sensor with serial number '{s_SerialNumber}' not found in the database, delete query was not executed.")
-            
+            return False
+        
     except mysql.connector.Error as e:
         print(f"Error deleting record: {e}")
+        return False
 
 def getCurrentHistoricalData(s_SerialNumber=None):
     try: 
@@ -290,7 +307,7 @@ def getCurrentHistoricalData(s_SerialNumber=None):
                     serial_number, value, timestamp = row
                     record = {"serialnum": serial_number, "value": value, "timestamp": str(timestamp)}
                     data.append(record)
-                    print(record)
+                    #print(record)
                 return data
             else:
                 print(f"Sensor data does not exist")
@@ -304,7 +321,7 @@ def getCurrentHistoricalData(s_SerialNumber=None):
                     serial_number, timestamp, value = row
                     record = {"serialnum": serial_number, "value": value, "timestamp": str(timestamp)}
                     data.append(record)
-                    print(record)
+                    #print(record)
                 return data
             else:
                 print(f"Sensor with serial number '{s_SerialNumber}' does not have historical data")
@@ -312,6 +329,184 @@ def getCurrentHistoricalData(s_SerialNumber=None):
         print(f"Error grabbing historical data: {e}")
         return None
     
+#Function to return all sensors and its info if a serial number is not specified 
+def get_sensors(s_SerialNumber=None):
+    sensors_info = {}
+    try:
+        cursor.execute("SELECT  serialnumber, type, location, errorflag, status, samplingrate  FROM sensor ORDER BY id DESC")
+        sensors = cursor.fetchall()
+
+        if sensors:
+            for sensor in sensors: 
+                sensor_info = {}
+                serialnumber = sensor[0]
+                sensor_info['serial_number'] = sensor[0]
+                sensor_info['type'] = sensor[1]
+                sensor_info['location'] = sensor[2]
+                sensor_info['errorflag'] = sensor[3]
+                sensor_info['status'] = sensor[4]
+                sensor_info['samplingrate'] = sensor[5]
+                sensor_info['historical_data'] = getCurrentHistoricalData(serialnumber)
+                sensors_info[serialnumber ] = sensor_info
+                if s_SerialNumber is not None and serialnumber == s_SerialNumber:
+                    return {serialnumber: sensor_info}
+            return sensors_info
+        else:
+            print("There are no sensors within the database.")
+            return None
+    except mysql.connector.Error as e:
+        print(f"Error grabbing sensor data: {e}")
+        return None
+
+#Function to return a sensor's data
+def get_sensor(s_SerialNumber):
+    sensors = get_sensors()
+    if s_SerialNumber in sensors:
+        print(get_sensors(s_SerialNumber))
+        return get_sensors(s_SerialNumber)
+    else: 
+        print("None")
+        return None
+
+#Function to get the sum of energy sensor values at a specfic timestamp or for historical data
+def total_water_consumption(s_Timestamp=None):
+    if s_Timestamp: 
+        #returns total water consumption at the timestamp specified
+        try:
+            select_query = "SELECT serialnum, val FROM value WHERE timestamp = %s"
+            cursor.execute(select_query, (s_Timestamp,))
+            sensor_data = cursor.fetchall()
+            if sensor_data:
+                totalWaterConsumption = 0
+                for i in range (len(sensor_data)):
+                    serialNum = sensor_data[i][0]
+                    sensor = getSensor(serialNum)
+                    if sensor.get_type() == 'Water':
+                        val = sensor.get_value(s_Timestamp)[1]
+                        #print("val:", val)
+                        totalWaterConsumption = totalWaterConsumption + val
+                print("Total Water Consumption: ", totalWaterConsumption )
+                return  totalWaterConsumption
+            else:
+                print(f"Timestamp'{s_Timestamp}' does not have values associated with it.")
+                return None
+        except mysql.connector.Error as e:
+            print(f"Error getting sensor data: {e}")
+    else: 
+        #returns total water consumption for historical data
+        try:
+            select_query = "SELECT serialnum, val, timestamp FROM value"
+            cursor.execute(select_query)
+            sensor_data = cursor.fetchall()
+            if sensor_data:
+                totalWaterConsumption = 0
+                for i in range (len(sensor_data)):
+                    serialNum = sensor_data[i][0]
+                    timestamp = sensor_data[i][2]
+                    sensor = getSensor(serialNum)
+                    if sensor.get_type() == 'Water':
+                        val = sensor.get_value(timestamp)[1]
+                        #print("val:", val)
+                        totalWaterConsumption = totalWaterConsumption + val
+                print("Total Water Consumption: ", totalWaterConsumption )
+                return  totalWaterConsumption
+            else:
+                print(f"There's no historical data.")
+                return None
+        except mysql.connector.Error as e:
+            print(f"Error getting sensor data: {e}")
+
+def total_offline(): 
+    try:
+        select_query = "SELECT serialnumber, status FROM sensor"
+        cursor.execute(select_query)
+        sensor_data = cursor.fetchall()
+        if sensor_data:
+            num_offline = 0
+            for i in range (len(sensor_data)):
+                serialNum = sensor_data[i][0]
+                status = sensor_data[i][1]
+                #status = getSensor(serialNum).get_status()
+                if status == 'OFF': 
+                    num_offline = num_offline + 1
+            print("Total Offline : ", num_offline)
+            return  num_offline
+        else:
+            print(f"There are no sensors. ")
+            return None
+    except mysql.connector.Error as e:
+        print(f"Error getting sensor data: {e}")
+    
+#Function to get the sum of energy sensor values at a specfic timestamp or for historical data
+def total_energy_consumption(s_Timestamp=None):
+    if s_Timestamp: 
+        #returns total energy consumption at the timestamp specified
+        try:
+            select_query = "SELECT serialnum, val FROM value WHERE timestamp = %s"
+            cursor.execute(select_query, (s_Timestamp,))
+            sensor_data = cursor.fetchall()
+            if sensor_data:
+                totalEnergyConsumption = 0
+                for i in range (len(sensor_data)):
+                    serialNum = sensor_data[i][0]
+                    sensor = getSensor(serialNum)
+                    if sensor.get_type() == 'Energy':
+                        val = sensor.get_value(s_Timestamp)[1]
+                        #print("val:", val)
+                        totalEnergyConsumption = totalEnergyConsumption + val
+                print("Total Energy Consumption: ", totalEnergyConsumption )
+                return  totalEnergyConsumption
+            else:
+                print(f"Timestamp'{s_Timestamp}' does not have sensor values associated with it.")
+                return None
+        except mysql.connector.Error as e:
+            print(f"Error getting sensor data: {e}")
+    else: 
+        #returns total energy consumption for historical data
+        try:
+            select_query = "SELECT serialnum, val, timestamp FROM value"
+            cursor.execute(select_query)
+            sensor_data = cursor.fetchall()
+            if sensor_data:
+                totalEnergyConsumption = 0
+                for i in range (len(sensor_data)):
+                    serialNum = sensor_data[i][0]
+                    timestamp = sensor_data[i][2]
+                    sensor = getSensor(serialNum)
+                    if sensor.get_type() == 'Energy':
+                        val = sensor.get_value(timestamp)[1]
+                        #print("val:", val)
+                        totalEnergyConsumption = totalEnergyConsumption + val
+                print("Total Energy Consumption: ", totalEnergyConsumption )
+                return  totalEnergyConsumption
+            else:
+                print(f"There's no historical data.")
+                return None
+        except mysql.connector.Error as e:
+            print(f"Error getting sensor data: {e}")
+
+def total_out_of_bounds():
+    try:
+        select_query = "SELECT serialnumber, errorflag FROM sensor"
+        cursor.execute(select_query)
+        sensor_data = cursor.fetchall()
+        if sensor_data:
+            num_out_of_bounds = 0
+            for i in range (len(sensor_data)):
+                serialNum = sensor_data[i][0]
+                error_flag = sensor_data[i][1]
+                #issue with set_errorFlag
+                #error_flag = getSensor(serialNum).get_errorflag()
+                if error_flag == 1: 
+                    num_out_of_bounds = num_out_of_bounds +  1
+            print("Total Out of bounds : ", num_out_of_bounds)
+            return  num_out_of_bounds
+        else:
+            print(f"There are no sensors.")
+            return None
+    except mysql.connector.Error as e:
+        print(f"Error getting sensor data: {e}")
+
 ############### END: FUNCTIONS ###################
 
 def main():
@@ -324,7 +519,7 @@ def main():
     #sensor.set_sampling_rate(10)
     #sensor.get_sampling_rate()
     
-    #sensor.set_value("2023-11-08 14:10:13", -1)
+    sensor.set_value(s_NewSensorType=None, s_NewLocation=None, i_NewSamplingRate=None)
     #sensor.get_value("2023-11-08 14:10:12")
 
     #sensor.set_status("off")
@@ -333,7 +528,14 @@ def main():
     #sensor.set_errorflag(0)
     #sensor.get_errorflag()
     
-    sensor.get_last_sampled_time()
-    
+    #sensor.get_last_sampled_time()
+    #get_sensors('Water_LakeHuron_S0003')
+
+    #get_sensor('Water_LakeHuron_S0003')
+    #total_energy_consumption()
+    #total_water_consumption()
+    #total_offline()
+    #total_out_of_bounds()
+
 if __name__ == "__main__":
     main()
