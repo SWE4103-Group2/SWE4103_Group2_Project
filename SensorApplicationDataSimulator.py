@@ -17,7 +17,7 @@ from firebase_admin import credentials
 from firebase_admin import db
 # pip install mysql-connector-python
 import mysql.connector
-
+from SensorApplication import getSensor
 ############### END: BASIC IMPORTS ##################
 
 s_ConfigFilePath = '/Users/briannaorr/Documents/Github/SWE4103_Group2_Project/config.json'
@@ -76,11 +76,19 @@ def update_database(s_SerialNumber, i_DataValue):
     
     
 def main():
-    lst_serial_numbers = ["Energy_UNB_S0023", "Energy_UNBSJ_S0030", "Energy_UNB_S0024" ]
-    for i in range(0,5): # generate 5 values for sensors in list
+    lst_serial_numbers = ["Water_River_S0017", "Water_River_S0021"]
+    for i in range(0,10): # generate 10 values for sensors in list
         for serialNum in lst_serial_numbers: # to get name of file
             data_value = generate_sensor_data() # Simulate sensor data generation
             update_database(serialNum, data_value)
+            sensor = getSensor(serialNum)
+            if sensor.get_type() == 'Water':
+                if data_value < 2 or data_value > 4: 
+                    sensor.set_errorflag(1)
+            if sensor.get_type() == 'Energy':
+                if data_value < 0 or data_value > 50: 
+                    sensor.set_errorflag(1)
+            
         time.sleep(i_SamplingRate) # Wait for the next sampling interval
    
     
