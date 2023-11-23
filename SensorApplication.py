@@ -38,6 +38,8 @@ s_DatabasePath            = config["DatabasePath"]
 conn = mysql.connector.connect(user=s_User, password=s_Password, host=s_Host, database=s_DatabasePath)
 cursor = conn.cursor()
 
+#technician's schedule 
+schedule = 'Technician_Schedule_Form.xlsx'
 # Sensor Object Class
 class Sensor:
 
@@ -482,6 +484,7 @@ def total_out_of_bounds():
                 error_flag = sensor_data[i][1]
                 #issue with set_errorFlag
                 #error_flag = getSensor(serialNum).get_errorflag()
+                print(error_flag)
                 if error_flag == 1: 
                     num_out_of_bounds = num_out_of_bounds +  1
             print("Total Out of bounds : ", num_out_of_bounds)
@@ -492,6 +495,65 @@ def total_out_of_bounds():
     except mysql.connector.Error as e:
         print(f"Error getting sensor data: {e}")
 
+#Function to return the serial number of sensors that are out of bounds 
+def get_Out_Of_Bounds_Sensors():
+    try:
+        select_query = "SELECT serialnumber, errorflag FROM sensor"
+        cursor.execute(select_query)
+        sensor_data = cursor.fetchall()
+        if sensor_data:
+            sensors = []
+            for i in range (len(sensor_data)):
+                serialNum = sensor_data[i][0]
+                error_flag = sensor_data[i][1]
+                if error_flag == 1: 
+                    sensors.append(serialNum)
+            print("Sensors : ", sensors)
+            return  sensors
+        else:
+            print( f"There are no sensors.")
+            return None
+    except mysql.connector.Error as e:
+        print(f"Error getting sensor data: {e}")
+
+#Function to update the availability of technicians
+def update_schedule_in_database(excel_file):
+    
+    #assumming 'id' from the user table is a foreign key in the schedules table 
+    #extract technician ids from database
+    technician_ids = []
+    select_query = "SELECT id FROM user WHERE usertype = %s"
+    cursor.execute(select_query, ("Technician",))
+    user_data = cursor.fetchall() 
+    for i in len(user_data):
+        technician_ids.append(user_data[i][0])
+    
+    #convert schedule to json object 
+    df = pd.read_excel(excel_file)
+    data = df.to_json(orient='records')
+    schedule_data = json.loads(data)
+    #assumming 'id' from the user table is a foreign key in the schedules table 
+    #extract technician ids from database
+    for id in technician_ids:
+        for record in schedule_data:
+            hour = record["Hour"]
+            mon = record["Monday"]
+            tues = record["Tuesday"]
+            wed = record["Wednesday"]
+            thurs = record["Thursday"]
+            fri = record["Friday"]
+            print(hour, mon, tues, wed, thurs, fri)
+
+            try:
+                update_query = "UPDATE schedules SET Monday = %s, Tuesday = %s, Wednesday = %s, Thursday = %s, Friday = %s WHERE technician_id = %s AND hour = %s"
+                cursor.execute(update_query, (mon,tues,wed,thurs,fri,id, hour,))
+                conn.commit
+            except mysql.connector.Error as e:
+                print(f"Error getting sensor data: {e}")
+        
+
+
+   
 ############### END: FUNCTIONS ###################
 
 def main():
@@ -521,9 +583,9 @@ def main():
     #total_water_consumption()
     #total_water_consumption("2023-11-08 14:07:33")
     #total_offline()
-    total_out_of_bounds()
-
-
+    #total_out_of_bounds()
+    #get_Out_Of_Bounds_Sensors()
+    update_schedule_in_database(schedule)
     
 if __name__ == "__main__":
     main()
