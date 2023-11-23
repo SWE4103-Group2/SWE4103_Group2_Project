@@ -525,16 +525,16 @@ def update_schedule_in_database(excel_file, technician_id):
     select_query = "SELECT * FROM schedule WHERE technicianID = %s"
     cursor.execute(select_query, (technician_id,))
     schedule_data = cursor.fetchall() 
-    print(schedule_data)
 
     if len(schedule_data) == 0:
         update_insert = 1
-
+    print(update_insert)
     #convert schedule to json object 
     df = pd.read_excel(excel_file)
     data = df.to_json(orient='records')
     schedule_data = json.loads(data)
-   
+
+    
     for record in schedule_data:
         hour = record["Hour"]
         mon = record["Monday"]
@@ -542,11 +542,17 @@ def update_schedule_in_database(excel_file, technician_id):
         wed = record["Wednesday"]
         thurs = record["Thursday"]
         fri = record["Friday"]
-        #print(hour, mon, tues, wed, thurs, fri)
+        
+        print(hour, mon, tues, wed, thurs, fri)
         try:
-            if update_insert == 0: 
-                update_query = "UPDATE schedule SET availabilityMonday = %s, availabilityTuesday = %s, availabilityWednesday = %s, availabilityThursday = %s, availabilityFriday = %s WHERE technicianID = %s AND timeInHours = %s"
-                cursor.execute(update_query, (mon,tues,wed,thurs,fri,technician_id, hour,))
+            if update_insert == 0:
+                select_query_id = "SELECT id FROM schedule WHERE technicianID = %s and timeInHours = %s"
+                cursor.execute(select_query_id, (technician_id,hour,))
+                user_data = cursor.fetchall() 
+                id = user_data[0][0] 
+                print(id)
+                update_query = "UPDATE schedule SET availabilityMonday = %s, availabilityTuesday = %s, availabilityWednesday = %s, availabilityThursday = %s, availabilityFriday = %s WHERE id = %s"
+                cursor.execute(update_query, (mon,tues,wed,thurs,fri,id,))
                 conn.commit
             else:
                 insert_query = "INSERT INTO schedule (technicianID, timeInHours, availabilityMonday, availabilityTuesday, availabilityWednesday, availabilityThursday, availabilityFriday) VALUES (%s, %s, %s, %s, %s, %s, %s)"
@@ -555,6 +561,19 @@ def update_schedule_in_database(excel_file, technician_id):
 
         except mysql.connector.Error as e:
             print(f"Error getting sensor data: {e}")
+
+
+def retrieve_earliest_opentime(): 
+    current_day = datetime.now().weekday()  
+    current_day_col = ['availabilitySunday', 'availabilityMonday', 'availabilityTuesday', 'availabilityWednesday', 'availabilityThursday', 'availabilityFriday', 'availabilitySaturday'][current_day]
+    current_time = datetime.now().strftime('%H:%M:%S')
+    earliest_open_entry_query = f""" SELECT technicianID, MIN(timeInHours) AS earliest_time
+        FROM schedule WHERE {current_day_col} = 'Y' AND timeInHours > '{current_time}'
+        GROUP BY technicianID
+    """
+    cursor.execute(earliest_open_entry_query)
+    earliest_open_times = cursor.fetchall()
+    print(earliest_open_times)
 
 
 ############### END: FUNCTIONS ###################
