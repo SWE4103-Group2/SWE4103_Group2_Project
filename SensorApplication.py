@@ -188,6 +188,7 @@ class Sensor:
             cursor.execute(update_query, (i_NewState, self.s_SerialNumber))
             conn.commit()
             print(f"Sensor '{self.s_SerialNumber}' errorflag changed to {i_NewState}")
+            schedule_technician()
         except mysql.connector.Error as err:
             print(f"MySQL error: {err}")
         except Exception as e:
@@ -516,44 +517,46 @@ def get_Out_Of_Bounds_Sensors():
     except mysql.connector.Error as e:
         print(f"Error getting sensor data: {e}")
 
-#Function to update the availability of technicians
-def update_schedule_in_database(excel_file):
+#Function to update or insert the availability of a technician
+def update_schedule_in_database(excel_file, technician_id):
+    #boolean to determine if the schedule is being updated or inserted, 0 - updates schedule , 1 - inserts schedule
+    update_insert = 0
     
-    #assumming 'id' from the user table is a foreign key in the schedules table 
-    #extract technician ids from database
-    technician_ids = []
-    select_query = "SELECT id FROM user WHERE usertype = %s"
-    cursor.execute(select_query, ("Technician",))
-    user_data = cursor.fetchall() 
-    for i in len(user_data):
-        technician_ids.append(user_data[i][0])
-    
+    select_query = "SELECT * FROM schedule WHERE technicianID = %s"
+    cursor.execute(select_query, (technician_id,))
+    schedule_data = cursor.fetchall() 
+    print(schedule_data)
+
+    if len(schedule_data) == 0:
+        update_insert = 1
+
     #convert schedule to json object 
     df = pd.read_excel(excel_file)
     data = df.to_json(orient='records')
     schedule_data = json.loads(data)
-    #assumming 'id' from the user table is a foreign key in the schedules table 
-    #extract technician ids from database
-    for id in technician_ids:
-        for record in schedule_data:
-            hour = record["Hour"]
-            mon = record["Monday"]
-            tues = record["Tuesday"]
-            wed = record["Wednesday"]
-            thurs = record["Thursday"]
-            fri = record["Friday"]
-            print(hour, mon, tues, wed, thurs, fri)
-
-            try:
-                update_query = "UPDATE schedules SET Monday = %s, Tuesday = %s, Wednesday = %s, Thursday = %s, Friday = %s WHERE technician_id = %s AND hour = %s"
-                cursor.execute(update_query, (mon,tues,wed,thurs,fri,id, hour,))
-                conn.commit
-            except mysql.connector.Error as e:
-                print(f"Error getting sensor data: {e}")
-        
-
-
    
+    for record in schedule_data:
+        hour = record["Hour"]
+        mon = record["Monday"]
+        tues = record["Tuesday"]
+        wed = record["Wednesday"]
+        thurs = record["Thursday"]
+        fri = record["Friday"]
+        #print(hour, mon, tues, wed, thurs, fri)
+        try:
+            if update_insert == 0: 
+                update_query = "UPDATE schedule SET availabilityMonday = %s, availabilityTuesday = %s, availabilityWednesday = %s, availabilityThursday = %s, availabilityFriday = %s WHERE technicianID = %s AND timeInHours = %s"
+                cursor.execute(update_query, (mon,tues,wed,thurs,fri,technician_id, hour,))
+                conn.commit
+            else:
+                insert_query = "INSERT INTO schedule (technicianID, timeInHours, availabilityMonday, availabilityTuesday, availabilityWednesday, availabilityThursday, availabilityFriday) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+                cursor.execute(insert_query, (technician_id, hour, mon, tues, wed, thurs, fri,))
+                conn.commit()
+
+        except mysql.connector.Error as e:
+            print(f"Error getting sensor data: {e}")
+
+
 ############### END: FUNCTIONS ###################
 
 def main():
@@ -585,7 +588,19 @@ def main():
     #total_offline()
     #total_out_of_bounds()
     #get_Out_Of_Bounds_Sensors()
-    update_schedule_in_database(schedule)
+    #retrieve_earliest_opentime()
+    #schedule_technician()
+    update_schedule_in_database(schedule, 1)
+
+    '''
+    technician_ids = []
+    select_query = "SELECT id FROM user WHERE userType = %s"
+    cursor.execute(select_query, ("Technician",))
+    user_data = cursor.fetchall() 
+    for i in len(user_data): #check if schedule is already in the database 
+        technician_ids.append(user_data[i][0])
+    '''
+    
     
 if __name__ == "__main__":
     main()
