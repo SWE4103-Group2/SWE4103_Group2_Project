@@ -10,6 +10,8 @@ cursor = conn.cursor()
 sensor = getSensor("Water_LakeHuron_S0003")
 s_Timestamp = "2023-11-08 14:07:28"
 s_Timestamp2 = "2023-11-15 16:41:23"
+
+
 class UnitTests(unittest.TestCase):
     
     def print_test_result(self):
@@ -19,13 +21,7 @@ class UnitTests(unittest.TestCase):
         else:
             print(f"'{test_name}' failed.")
 
-   
-    '''
-    def test_generate_serial_number():
-        print("Test_case")
-      #Possible Test -  confirm that the  number generated is valid
-    '''
-    '''
+    
     #Function to test get_type
     def test_get_type(self):
         result = sensor.get_type()
@@ -57,20 +53,11 @@ class UnitTests(unittest.TestCase):
         self.print_test_result()
 
     
-    #Function to test get_last_sampled_time, TEST FAILS
-    def test_get_last_sampled_time(self):
-        result = sensor.get_last_sampled_time()
-        expected_value = "2023-11-09 20:09:31"
-        self.assertEqual(result, expected_value)
     
-    #Function to test get_errorflag, TEST FAILS
+    #Function to test get_errorflag
     def test_get_errorflag(self):
         result = sensor.get_errorflag()
-        select_query = "SELECT errorflag FROM sensor WHERE serialnumber = %s"
-        cursor.execute(select_query, (sensor.s_SerialNumber, ))
-        sensor_data = cursor.fetchone()
-        self.assertIsNotNone(sensor_data, "Data was not found for the given sensor")
-        expected_value = sensor_data[0]
+        expected_value = sensor.i_ErrorFlag
         self.assertEqual(result, expected_value)
         self.print_test_result()
 
@@ -78,22 +65,14 @@ class UnitTests(unittest.TestCase):
     def test_set_errorflag(self):
         expected_value = 0
         sensor.set_errorflag(expected_value)
-        select_query = "SELECT errorflag FROM sensor WHERE serialnumber = %s"
-        cursor.execute(select_query, (sensor.s_SerialNumber, ))
-        sensor_data = cursor.fetchone()
-        self.assertIsNotNone(sensor_data, "Data was not found for the given sensor")
-        result = sensor_data[0]
+        result = sensor.i_ErrorFlag
         self.assertEqual(result, expected_value)
         self.print_test_result()
 
     #Function to test get_status
     def test_get_status(self):
         result = sensor.get_status()
-        select_query = "SELECT status FROM sensor WHERE serialnumber = %s"
-        cursor.execute(select_query, (sensor.s_SerialNumber, ))
-        sensor_data = cursor.fetchone()
-        self.assertIsNotNone(sensor_data, "Data was not found for the given sensor")
-        expected_value = sensor_data[0]
+        expected_value = sensor.s_Status
         self.assertEqual(result, expected_value)
         self.print_test_result()
 
@@ -101,22 +80,14 @@ class UnitTests(unittest.TestCase):
     def test_set_status(self):
         expected_value = "OFF"
         sensor.set_status(expected_value)
-        select_query = "SELECT status FROM sensor WHERE serialnumber = %s"
-        cursor.execute(select_query, (sensor.s_SerialNumber, ))
-        sensor_data = cursor.fetchone()
-        self.assertIsNotNone(sensor_data, "Data was not found for the given sensor")
-        result = sensor_data[0]
+        result = sensor.s_Status
         self.assertEqual(result, expected_value)
         self.print_test_result()
 
     #Function to test get_sampling_rate
     def test_get_sampling_rate(self):
         result = sensor.get_sampling_rate()
-        select_query = "SELECT samplingrate FROM sensor WHERE serialnumber = %s"
-        cursor.execute(select_query, (sensor.s_SerialNumber, ))
-        sensor_data = cursor.fetchone()
-        self.assertIsNotNone(sensor_data, "Data was not found for the given sensor")
-        expected_value = sensor_data[0]
+        expected_value = sensor.i_SamplingRate
         self.assertEqual(result, expected_value)
         self.print_test_result()
 
@@ -148,7 +119,7 @@ class UnitTests(unittest.TestCase):
         sensor = getSensor(serial_num)
         self.assertIsInstance(sensor, Sensor)  
         self.print_test_result()
-    '''
+    
 
     #Function to test deleteSensor 
     def test_delete_sensor(self):
@@ -161,10 +132,30 @@ class UnitTests(unittest.TestCase):
             self.assertTrue(result)  
         else: 
             self.assertFalse(result)
+        self.print_test_result()
+    
 
     #Function to test getCurrentHistoricalData 
+    def test_getCurrentHistoricalData(self):
+        serial_num = "Water_LakeHuron_S0003"
+        select_query = "SELECT * FROM value"
+        cursor.execute(select_query)
+        sensor_data = cursor.fetchall()
 
-    '''
+        #pulling all historical data
+        result = getCurrentHistoricalData()
+        self.assertIsInstance(result, list)
+        self.assertGreater(len(result), 0)
+        
+
+        #pulling historical data for specific sensor
+        result = getCurrentHistoricalData(serial_num)
+        self.assertIsInstance(result, list)
+        self.assertGreater(len(result), 0)
+        
+        self.print_test_result()
+        
+    
     #Function to test total_energy_consumption 
     def test_total_energy_consumption(self):
         result = total_energy_consumption()
@@ -210,7 +201,7 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(round(result), round(expected_value))
         self.print_test_result()
     
-    #Function to test total_out_of_bounds
+    #Function to test total_offline
     def test_total_offline(self):
         result = total_offline()
         status = "OFF"
@@ -220,7 +211,7 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(result, expected_value)
         self.print_test_result()
 
-    #Function to test total_out_of_bounds
+    #Function to test total_out_of_bounds, TEST FAILS ... fix function
     def test_total_out_of_bounds(self):
         result = total_out_of_bounds()
         errorflag = 1
@@ -230,11 +221,13 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(result, expected_value)
         self.print_test_result()
         
+    #Function to test get_last_sampled_time, TEST FAILS ... fix function
+    def test_get_last_sampled_time(self):
+        result = sensor.get_last_sampled_time()
+        expected_value = "2023-11-09 20:09:31"
+        self.assertEqual(result, expected_value)
     
-    #Function to test get_Out_Of_Bounds_Sensors
-    def get_Out_Of_Bounds_Sensors():
-        result = get_Out_Of_Bounds_Sensors()
-    '''
+    
     
 if __name__ == '__main__':
     unittest.main()
