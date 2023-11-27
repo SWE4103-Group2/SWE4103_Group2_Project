@@ -164,5 +164,5 @@ def Book(i_UserID, s_DayOfWeek, s_Hour, s_AvailabilityString):
 
 ## TEST ##
 df = getSchedule(i_UserID=1)
-#s_DayOfWeek, s_Month, s_Day, s_Year, s_Hour, s_AvailabilityString = getEarliestAvailability(df)
-#Book(i_UserID=1, s_DayOfWeek=s_DayOfWeek, s_Hour=s_Hour, s_AvailabilityString=s_AvailabilityString)
+s_DayOfWeek, s_Month, s_Day, s_Year, s_Hour, s_AvailabilityString = getEarliestAvailability(df)
+Book(i_UserID=1, s_DayOfWeek=s_DayOfWeek, s_Hour=s_Hour, s_AvailabilityString=s_AvailabilityString)

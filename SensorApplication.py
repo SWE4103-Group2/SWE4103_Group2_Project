@@ -563,35 +563,51 @@ def update_schedule_in_database(excel_file, technician_id):
 
 
 # Function to retrieve user's schedule from the database
-def getSchedule(i_UserID):
+def getSchedule():
     try:
-        select_query = "SELECT timeInHours, availabilityMonday, availabilityTuesday, availabilityWednesday, availabilityThursday, availabilityFriday FROM schedule WHERE technicianID = %s"
+        select_query = "SELECT timeInHours, availabilityMonday, availabilityTuesday, availabilityWednesday, availabilityThursday, availabilityFriday, technicianID FROM schedule"
 
-        cursor.execute(select_query, (i_UserID,))
+        #cursor.execute(select_query, (i_UserID,))
+        cursor.execute(select_query)
         sensor_data = cursor.fetchall()
 
         if sensor_data:  # if there is an entry
-            rows = []
-            for row in sensor_data:
-                timeInHours, arr_Monday, arr_Tuesday, arr_Wednesday, arr_Thursday, arr_Friday = row
-    
-                new_row = {
-                    "Hours": timeInHours,
-                    "Monday": str(arr_Monday),
-                    "Tuesday": str(arr_Tuesday),
-                    "Wednesday": str(arr_Wednesday),
-                    "Thursday": str(arr_Thursday),
-                    "Friday": str(arr_Friday)
-                }
+            lst_Identifiers = []
+            for row in sensor_data: 
+                timeInHours, arr_Monday, arr_Tuesday, arr_Wednesday, arr_Thursday, arr_Friday, technicianID = row
+                if technicianID not in lst_Identifiers: # check for ids
+                    lst_Identifiers.append(technicianID) # save unique ids
+            
+            lst_df = [] # list of all dataframes
+            lst_IdentifiersInOrder = []
+            for idNum in lst_Identifiers: # for each id get their schedule
+                query = "SELECT timeInHours, availabilityMonday, availabilityTuesday, availabilityWednesday, availabilityThursday, availabilityFriday FROM schedule WHERE technicianID = %s"
+            
+                cursor.execute(query, (idNum,))
+                userInfoData = cursor.fetchall()
 
-                rows.append(new_row)
+                if userInfoData:  # if there is an entry
+                    rows = []
+                    for i in userInfoData:
+                        timeInHours, arr_Monday, arr_Tuesday, arr_Wednesday, arr_Thursday, arr_Friday = i
+                        new_row = {
+                            "Hours": timeInHours,
+                            "Monday": str(arr_Monday),
+                            "Tuesday": str(arr_Tuesday),
+                            "Wednesday": str(arr_Wednesday),
+                            "Thursday": str(arr_Thursday),
+                            "Friday": str(arr_Friday)
+                        }
 
-            df = pd.concat([pd.DataFrame(rows)], ignore_index=True)
-            df = df.replace({'Y': 1, 'N': 0})
-            print(df)
-            return df
+                        rows.append(new_row)
+
+                    df = pd.concat([pd.DataFrame(rows)], ignore_index=True)
+                    df = df.replace({'Y': 1, 'N': 0})
+                    lst_df.append(df) # list of schedule matrices in binary format
+                    lst_IdentifiersInOrder.append(idNum)
+            return lst_df, lst_IdentifiersInOrder
         else:
-            print(f"No data found for Technician with ID '{i_UserID}'")
+            print(f"No data found in schedule table")
     except mysql.connector.Error as e:
         print(f"MySQL Error: {e}")
     except Exception as e:
@@ -628,56 +644,84 @@ def find_next_day_of_week(current_day):
     else:
         return "Invalid day name"
 
-from datetime import datetime, time
+def getEarliestAvailability(arr_OfDataFrames, lst_IdentifiersInOrder):
+    lst_result = []
+    for df in arr_OfDataFrames:
 
-def getEarliestAvailability(df):
-    
-    # Set the desired time
-    desired_time = time(hour=14, minute=00, second=0)
-    current_date = datetime.now().date()
-    current_time = datetime.combine(current_date, desired_time)
-    print("Manually set current time:", current_time)
-
-    current_day = current_time.weekday()
-    day_of_week = current_time.strftime('%A')
-    current_hour = current_time.hour
-    next_hour = current_hour + 1 
-    
-    filtered_df = df[df['Hours'] == (f"0 days {next_hour}:00:00")]
-    hour_and_day = filtered_df[f"{day_of_week}"]
-
-    next_day = None
-    next_day_of_week = None
-    next_hour = None
-
-    if hour_and_day.iat[0] == 1:
-        next_day = current_day
-        next_day_of_week = day_of_week
-        next_hour = current_hour + 1 
-        next_hour = (f"0 days {next_hour}:00:00")
-    else: # keep searching
-        tomorrow = current_time + timedelta(days=1)
-        day_of_week_tomorrow = tomorrow.strftime('%A')
-
-        if day_of_week_tomorrow == "Saturday":
-            next_day = current_time + timedelta(days=3)
-        elif day_of_week_tomorrow == "Sunday":
-            next_day = current_time + timedelta(days=2)
-        else:
-            next_day = current_time + timedelta(days=1)
-
-        next_day_of_week = next_day.strftime('%A')
+        current_time = datetime.now()
+        current_day = current_time.weekday()
+        day_of_week = current_time.strftime('%A')
+        current_hour = current_time.hour
+        next_hour = current_hour + 1
+        if next_hour == 24:
+            next_hour = 0
         
-        for index, row in df.iterrows():
-            entry = row[next_day_of_week]
-            if entry == 1:
-                next_hour = row['Hours']
-                break
+        next_day = None
+        next_day_of_week = None
+        next_hour = None
         
-    s_Year, s_Month, s_Day = find_next_day_of_week(next_day_of_week)
-    s_AvailabilityString = f"{next_day_of_week} {s_Month} {s_Day}, {s_Year} at {str(next_hour)[7:]}"
-    print(f"Next Time: {next_day_of_week} {s_Month} {s_Day}, {s_Year} at {str(next_hour)[7:]}")
-    return next_day_of_week, s_Month, s_Day, s_Year, str(next_hour)[7:], s_AvailabilityString
+        if (day_of_week != "Saturday" and day_of_week != "Sunday"):
+            filtered_df = df[df['Hours'] == (f"0 days {next_hour}:00:00")]
+            hour_and_day = filtered_df[f"{day_of_week}"]
+            
+            if (hour_and_day.iat[0] == 1):
+                next_day = current_day
+                next_day_of_week = day_of_week
+                next_hour = current_hour + 1 
+                next_hour = (f"0 days {next_hour}:00:00")
+            else: # keep searching
+                tomorrow = current_time + timedelta(days=1)
+                day_of_week_tomorrow = tomorrow.strftime('%A')
+
+                if day_of_week_tomorrow == "Saturday":
+                    next_day = current_time + timedelta(days=3)
+                elif day_of_week_tomorrow == "Sunday":
+                    next_day = current_time + timedelta(days=2)
+                else:
+                    next_day = current_time + timedelta(days=1)
+
+                next_day_of_week = next_day.strftime('%A')
+                
+                for index, row in df.iterrows():
+                    entry = row[next_day_of_week]
+                    if entry == 1:
+                        next_hour = row['Hours']
+                        break
+        else: # keep searching
+            tomorrow = current_time + timedelta(days=1)
+            day_of_week_tomorrow = tomorrow.strftime('%A')
+
+            if day_of_week_tomorrow == "Saturday":
+                next_day = current_time + timedelta(days=3)
+            elif day_of_week_tomorrow == "Sunday":
+                next_day = current_time + timedelta(days=2)
+            else:
+                next_day = current_time + timedelta(days=1)
+
+            next_day_of_week = next_day.strftime('%A')
+            
+            for index, row in df.iterrows():
+                entry = row[next_day_of_week]
+                if entry == 1:
+                    next_hour = row['Hours']
+                    break
+            
+        s_Year, s_Month, s_Day = find_next_day_of_week(next_day_of_week)
+        s_AvailabilityString = f"{s_Year}-{s_Month}-{s_Day}  {str(next_hour)[7:]}"
+        lst_result.append([s_Year, s_Month, s_Day, str(next_hour)[7:]])
+        print(f"Next Time: {next_day_of_week} {s_Month} {s_Day}, {s_Year} at {str(next_hour)[7:]}")
+    
+    lst_DateObjects = []
+    for val in lst_result:
+        date_object = datetime(val[0], datetime.strptime(val[1], '%B').month, val[2], *map(int, val[3].split(':')))
+        lst_DateObjects.append(date_object)
+    
+    #closest_date = min(lst_DateObjects, key=lambda date_obj: abs(date_obj - current_time))
+    closest_date, userID = min(zip(lst_DateObjects, lst_IdentifiersInOrder), key=lambda item: abs(item[0] - current_time))
+
+    #print("Date:", closest_date)
+    #print("UserID:", userID)
+    return next_day_of_week, s_Month, s_Day, s_Year, str(next_hour)[7:], s_AvailabilityString, closest_date, userID
     
 def Book(i_UserID, s_DayOfWeek, s_Hour, s_AvailabilityString):
     try:       
@@ -686,11 +730,64 @@ def Book(i_UserID, s_DayOfWeek, s_Hour, s_AvailabilityString):
         print(s_Time)
         cursor.execute(update_query, ('N', s_Time, i_UserID))
         conn.commit()
-        print(f"Success! Technician with ID '{i_UserID}' is Booked for {s_AvailabilityString}")
+        print(f"Success! Technician with ID '{i_UserID}' is booked for {s_AvailabilityString}")
     except mysql.connector.Error as err:
         print(f"MySQL error: {err}")
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
+
+
+#Function to create tickets, should be called when a sensor's value is out of bounds or off 
+def create_ticket(serialNum):
+    state = "UNRESOLVED"
+    insert_query = "INSERT INTO ticket (State, sensor) VALUES (%s, %s)"
+    cursor.execute(insert_query, (state, serialNum,))
+    conn.commit()
+
+
+#Function to update tickets
+#States: RESOLVED, UNRESOLVED
+def update_ticket(state, ticket_id):
+    update_query = "UPDATE ticket SET State = %s WHERE id = %s"
+    cursor.execute(update_query, (state,ticket_id,))
+    conn.commit()
+
+
+#Function to handle alerting subsystem 
+def alert(serialnumber):
+    select_query = "SELECT sensor,state FROM ticket"
+    cursor.execute(select_query)
+    tickets = cursor.fetchall()
+    ticket_exists = False
+    for ticket in tickets:
+        sensor, state = ticket
+        if serialnumber == sensor and state == "RESOLVED": #ticket for sensor exists but it was resolved so creating another is required
+            create_ticket(serialnumber)
+        if serialnumber == sensor and state == "UNRESOLVED": #creating a new ticket is not required
+            ticket_exists = True
+    if not(ticket_exists):  
+        create_ticket(serialnumber)
+    
+    arr_df, lst_IdentifiersInOrder = getSchedule()
+    s_DayOfWeek, s_Month, s_Day, s_Year, s_Hour, s_AvailabilityString, time_EarliestDate, i_UserID = getEarliestAvailability(arr_df, lst_IdentifiersInOrder)
+    Book(i_UserID=i_UserID, s_DayOfWeek=s_DayOfWeek, s_Hour=s_Hour, s_AvailabilityString=s_AvailabilityString)
+    
+    #add updating booking time in table 
+
+
+#Function to continuously check the db 
+def pollingDB():
+    check_db = True  #make this a global variable, assuming db is not checked after working hours, this variable will only be set to true during working hours
+    if check_db:
+        select_query = "SELECT serialnumber,errorflag, status FROM sensor"
+        cursor.execute(select_query)
+        sensors = cursor.fetchall()
+        for sensor in sensors:
+            serialnumber,errorflag, status = sensor
+            if errorflag == 1 or status == 'OFF':
+                alert(serialnumber)
+
+
 
 
 
@@ -728,11 +825,17 @@ def main():
     #retrieve_earliest_opentime()
     #schedule_technician()
     #update_schedule_in_database(schedule, 1)
-    df = getSchedule(i_UserID=2)
-    s_DayOfWeek, s_Month, s_Day, s_Year, s_Hour, s_AvailabilityString = getEarliestAvailability(df)
+    #df = getSchedule(i_UserID=2)
+    #s_DayOfWeek, s_Month, s_Day, s_Year, s_Hour, s_AvailabilityString = getEarliestAvailability(df)
     #Book(i_UserID=1, s_DayOfWeek=s_DayOfWeek, s_Hour=s_Hour, s_AvailabilityString=s_AvailabilityString)
+    #create_ticket()
+    #update_ticket("RESOLVED", 1)
+    #arr_df, lst_IdentifiersInOrder = getSchedule()
+    #s_DayOfWeek, s_Month, s_Day, s_Year, s_Hour, s_AvailabilityString, time_EarliestDate, i_UserID = getEarliestAvailability(arr_df, lst_IdentifiersInOrder)
+    #Book(i_UserID=i_UserID, s_DayOfWeek=s_DayOfWeek, s_Hour=s_Hour, s_AvailabilityString=s_AvailabilityString)
     
     
     
 if __name__ == "__main__":
     main()
+ 
