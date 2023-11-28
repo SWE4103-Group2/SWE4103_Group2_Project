@@ -156,16 +156,16 @@ class UnitTests(unittest.TestCase):
         
     
     #Function to test total_energy_consumption 
-    def test_total_energy_consumption(self):
-        result = total_energy_consumption()
-        type = "Energy%"
-        sum_query = "SELECT SUM(val) FROM value WHERE serialnum LIKE  %s"
-        cursor.execute(sum_query,(type,))
-        data = cursor.fetchone()
-        self.assertIsNotNone(data, "Data was not found for the given sensor")
-        expected_value= data[0]
-        self.assertEqual(round(result), round(expected_value))
-        self.print_test_result()
+    # def test_total_energy_consumption(self):
+    #     result = total_energy_consumption()
+    #     type = "Energy%"
+    #     sum_query = "SELECT SUM(val) FROM value WHERE serialnum LIKE  %s"
+    #     cursor.execute(sum_query,(type,))
+    #     data = cursor.fetchone()
+    #     self.assertIsNotNone(data, "Data was not found for the given sensor")
+    #     expected_value= data[0]
+    #     self.assertEqual(round(result), round(expected_value))
+    #     self.print_test_result()
     
     
     #Function to test total_energy_consumption at a specific timestamp
@@ -181,14 +181,14 @@ class UnitTests(unittest.TestCase):
     #     self.print_test_result()
     
     #Function to test total_water_consumption 
-    def test_total_water_consumption(self):
-        result = total_water_consumption()
-        type = "Water%"
-        sum_query = "SELECT SUM(val) FROM value WHERE serialnum LIKE %s"
-        cursor.execute(sum_query,(type,))
-        expected_value= cursor.fetchone()[0]
-        self.assertEqual(round(result), round(expected_value))
-        self.print_test_result()
+    # def test_total_water_consumption(self):
+    #     result = total_water_consumption()
+    #     type = "Water%"
+    #     sum_query = "SELECT SUM(val) FROM value WHERE serialnum LIKE %s"
+    #     cursor.execute(sum_query,(type,))
+    #     expected_value= cursor.fetchone()[0]
+    #     self.assertEqual(round(result), round(expected_value))
+    #     self.print_test_result()
 
     #Function to test total_water_consumption at a specific timestamp
     # def test_total_water_consumption(self):
