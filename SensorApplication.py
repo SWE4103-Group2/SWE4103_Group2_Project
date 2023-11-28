@@ -796,7 +796,7 @@ def aggregatesensors(a: list[str], vsid: int):
     
     # Get the sensor data from the database.
     try:
-        cursor.execute("SELECT * from value FOR JSON PATH")
+        cursor.execute("SELECT JSON_ARRAYAGG(JSON_OBJECT('sensorid', sensorid, 'value', val)) FROM value;")
         result = cursor.fetchall()
         for i in intarray:
             for row in result:
