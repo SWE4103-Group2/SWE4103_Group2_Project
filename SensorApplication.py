@@ -786,6 +786,36 @@ def get_tickets():
         
     return data
 
+#function to aggregate sensors by adding values
+def aggregatesensors(a: list[str], vsid: int):
+    # initialize the val variable
+    value = 0  
+    
+    # Convert string array to int
+    intarray = convert_to_int(a)
+    
+    # Get the sensor data from the database.
+    try:
+        cursor.execute("SELECT * from value FOR JSON PATH")
+        result = cursor.fetchall()
+        for i in intarray:
+            for row in result:
+                if row == i:  
+                    value += result[i][val]  # Updated to use 'i' as index and 'value' in square brackets if 'value' is a column name
+        
+        print(value)
+        #stmt = "INSERT INTO virtualvalue (sensorid, val) values (%s, %s)"
+        #cursor.execute(stmt, (vsid, value))
+        #conn.commit()  # Added parentheses to commit method
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+ 
+def convert_to_int(input: list[str]):
+    result = []
+    for item in input:
+        result.append(int(item))
+    return result
+ 
 ############### END: FUNCTIONS ###################
 
 def main():
