@@ -1,11 +1,11 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 
-const DeleteSensor = ({ sensorId, onSensorDeleted }) => {
+const DeleteSensor = ({ sensorId }) => {
   const handleDeleteSensor = async () => {
     try {
-      await axios.delete(`http://localhost:5000/Sensors/${sensorId}`);
-      onSensorDeleted(sensorId); // Notify parent component about the deleted sensor
+      await axios.delete(`http://127.0.0.1:5000/Sensors/${sensorId}`);
     } catch (error) {
       console.error('Error deleting sensor:', error);
     }
@@ -13,7 +13,11 @@ const DeleteSensor = ({ sensorId, onSensorDeleted }) => {
 
   return (
     <div>
-      <button onClick={handleDeleteSensor}>Delete Sensor</button>
+      <Link to='/sensors'>
+          <button onClick={handleDeleteSensor}>
+            Delete Sensor
+          </button>
+      </Link>
     </div>
   );
 };

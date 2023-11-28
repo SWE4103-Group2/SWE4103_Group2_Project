@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
+import { AuthContext } from './App';
 
 const Navigation = () => {
+    const { logout } = useContext(AuthContext);
+
     function doClickTicketsR(e) {
         e.preventDefault();  // Prevent the default behavior of the anchor tag
         window.location.href = "accessdeniedR.html";
@@ -12,22 +15,21 @@ const Navigation = () => {
             <ul>
                 <li>
                     <a href="#">
-                        <td width="60px">
-                            <div className="imgBx">
-                                <img src="assets/imgs/sensor2.jpg" alt="" />
-                            </div>
-                        </td>
-                        <span className="title">Sensor Mgt. System</span>
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td width="60px">
+                                        <div className="imgBx">
+                                            <img src="assets/imgs/sensor2.jpg" alt="" />
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span className="title">Sensor Mgt. System</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </a>
-                </li>
-
-                <li>
-                    <Link to="/historical">
-                        <span className="icon">
-                            <ion-icon name="home-outline"></ion-icon>
-                        </span>
-                        <span className="title">Historical Data</span>
-                    </Link>
                 </li>
 
                 <li>
@@ -36,6 +38,15 @@ const Navigation = () => {
                             <ion-icon name="home-outline"></ion-icon>
                         </span>
                         <span className="title">Real-Time Data</span>
+                    </Link>
+                </li>
+
+                <li>
+                    <Link to="/historical">
+                        <span className="icon">
+                            <ion-icon name="home-outline"></ion-icon>
+                        </span>
+                        <span className="title">Historical Data</span>
                     </Link>
                 </li>
 
@@ -67,12 +78,12 @@ const Navigation = () => {
                 </li>
 
                 <li>
-                    <a href="#" onClick={doClickTicketsR}>
+                    <Link to="/tickets">
                         <span className="icon">
                             <ion-icon name="settings-outline"></ion-icon>
                         </span>
                         <span className="title">Tickets</span>
-                    </a>
+                    </Link>
                 </li>
 
                 <li>
@@ -85,7 +96,7 @@ const Navigation = () => {
                 </li>
 
                 <li>
-                    <a href="#">
+                    <a href="/login" onClick={logout}>
                         <span className="icon">
                             <ion-icon name="log-out-outline"></ion-icon>
                         </span>

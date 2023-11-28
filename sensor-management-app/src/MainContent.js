@@ -1,40 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import AddSensor from './AddSensor';
-import DeleteSensor from './DeleteSensor';
+import React from 'react';
+import { useParams } from 'react-router-dom';
+import ConfigureSensor from './ConfigureSensor';
+import Historical from './Historical';
 import OfflineSensors from './OfflineSensors';
 import RealTime from './RealTime';
 import Reports from './Reports';
-import SensorList from './SensorList';
+import Sensors from './Sensors';
+import Tickets from './Tickets';
 
-const MainContent = ({ showSensors=false, showRT=false, showHistorical=false, showAnalytics=false, showReports=false }) => {
-  const [sensors, setSensors] = useState({});
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/');
-        setSensors(response.data);
-      } catch (error) {
-        console.error('Error fetching sensors:', error);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleSensorAdded = (newSensor) => {
-    setSensors((prevSensors) => {
-      // Extract the sensor ID and the sensor object from newSensor
-      const [newSensorId, newSensorData] = Object.entries(newSensor)[0];
-      console.log('Previous Sensors:', prevSensors);
-      return {...prevSensors, [newSensorId]: newSensorData};
-    });
-  };
-
-  const handleSensorDeleted = (deletedSensorId) => {
-    setSensors((prevSensors) => Object.values(prevSensors).filter((sensor) => sensor.serial_number !== deletedSensorId));
-  };
+const MainContent = ({ showSensors=false}) => {
+  const { show, sensorid } = useParams();
   
   return (
     <div>
@@ -102,37 +77,26 @@ const MainContent = ({ showSensors=false, showRT=false, showHistorical=false, sh
             {/* ================ Order Details List ================= */}
             <div className="details">
                 <div className="Documentation">
-                    {showRT && (
+                    {show==='real-time' && (
                         <RealTime />
                     )}
-                    {showHistorical && (
-                        <SensorList />
+                    {show==='historical' && (
+                        <Historical />
                     )}
-                    {showAnalytics && (
+                    {show==='analytics' && (
                         <OfflineSensors />
                     )}
-                    {showReports && (
+                    {show==='reports' && (
                         <Reports />
                     )}
-                    {showSensors && (
-                        <div>
-                            <AddSensor onSensorAdded={handleSensorAdded} />
-                            <table>
-                                <tbody>
-                                    {Object.values(sensors).map((sensor) => (
-                                        <tr key={sensor.serial_number}>
-                                            <td>{sensor.serial_number}</td>
-                                            <td>
-                                                <DeleteSensor
-                                                    sensorId={sensor.serial_number}
-                                                    onSensorDeleted={handleSensorDeleted}
-                                                />
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                    {showSensors && !sensorid && (
+                        <Sensors />
+                    )}
+                    {sensorid && (
+                        <ConfigureSensor sensorid={sensorid} />
+                    )}
+                    {show==='tickets' && (
+                        <Tickets />
                     )}
                 </div>
 

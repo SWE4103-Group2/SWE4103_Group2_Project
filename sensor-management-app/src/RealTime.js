@@ -11,7 +11,7 @@ const RealTime = () => {
     const fetchData = async () => {
       try {
         // Fetch real-time data from Flask backend
-        const response = await axios.get('http://localhost:5000/real-time');
+        const response = await axios.get('http://127.0.0.1:5000/real-time');
         console.log(response.data);
 
         // Sign in anonymously
@@ -22,7 +22,15 @@ const RealTime = () => {
         const ref = firebase.database().ref('/energydata');
         ref.on('value', (snapshot) => {
           const data = snapshot.val();
-          setRealTimeData(data || []);
+          if (data) {
+            const keys = Object.keys(data);
+            const lastKey = keys[keys.length - 1];
+            const lastValue = data[lastKey];
+            setRealTimeData(lastValue);
+          }
+          else {
+            setRealTimeData([]);
+          }
           setLoading(false);
         }, (error) => {
           console.error(error);
@@ -50,13 +58,11 @@ const RealTime = () => {
       <h1>Real-time Data</h1>
       {loading && <p>Loading...</p>}
       {error && <p>Error: {error}</p>}
-      <div id="data">
-        {Object.values(realTimeData).map((sensorEntry, index) => (
-          <div key={index}>
-            Timestamp: {sensorEntry.timestamp}, Value: {sensorEntry.value}
-          </div>
-        ))}
-      </div>
+      {!loading && (
+        <div id="data">
+          Timestamp: {realTimeData.timestamp}, Value: {realTimeData.value}
+        </div>
+      )}
     </div>
   );
 };

@@ -1,0 +1,23 @@
+.historical-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.historical-table th, .historical-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.historical-table th {
+  background-color: #f2f2f2;
+}
+
+th.sort-asc::after {
+  content: ' ▲';
+}
+
+th.sort-desc::after {
+  content: ' ▼';
+}
