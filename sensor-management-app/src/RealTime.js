@@ -1,11 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import firebase from './firebase';
+import { Line } from 'react-chartjs-2';
+import { Chart, LineElement, PointElement, LinearScale, CategoryScale } from 'chart.js';
+
+Chart.register(LineElement, PointElement, LinearScale, CategoryScale);
 
 const RealTime = () => {
   const [realTimeData, setRealTimeData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [chartData, setChartData] = useState({
+    labels: [],
+    datasets: [
+      {
+        label: 'Real-time Data',
+        fill: false,
+        lineTension: 0.1,
+        backgroundColor: 'rgba(75,192,192,0.4)',
+        borderColor: 'rgba(75,192,192,1)',
+        // ... other dataset configurations
+        data: [],
+      },
+    ],
+  });
+
+  const chartRef = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -26,9 +47,22 @@ const RealTime = () => {
             const keys = Object.keys(data);
             const lastKey = keys[keys.length - 1];
             const lastValue = data[lastKey];
+            console.log(lastValue);
+            // Update chart data
+            if (lastValue.value !== undefined) {
+              setChartData((prevData) => ({
+                labels: [...prevData.labels, lastValue.timestamp],
+                datasets: [
+                  {
+                    ...prevData.datasets[0],
+                    data: [...prevData.datasets[0].data, lastValue.value],
+                  },
+                ],
+              }));
+            }
+
             setRealTimeData(lastValue);
-          }
-          else {
+          } else {
             setRealTimeData([]);
           }
           setLoading(false);
@@ -46,23 +80,46 @@ const RealTime = () => {
 
     fetchData();
 
-    // Cleanup: Unsubscribe from Firebase updates when the component unmounts
     return () => {
+      // Cleanup: Unsubscribe from Firebase updates when the component unmounts
       const ref = firebase.database().ref('/energydata');
       ref.off('value');
     };
   }, []);
 
+  useEffect(() => {
+    // Create or update the chart when chartData changes
+    if (chartRef.current && chartData.datasets[0].data.length > 0) {
+      chartRef.current.data = chartData;
+      chartRef.current.update();
+    }
+  }, [chartData]);
+
   return (
     <div>
       <h1>Real-time Data</h1>
-      {loading && <p>Loading...</p>}
       {error && <p>Error: {error}</p>}
-      {!loading && (
-        <div id="data">
-          Timestamp: {realTimeData.timestamp}, Value: {realTimeData.value}
-        </div>
-      )}
+      {true && (<div>
+        <Line
+          ref={chartRef}
+          data={chartData}
+          options={{
+            scales: {
+              x: {
+                type: 'category',
+                labels: chartData.labels,
+              },
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Value',
+                },
+              },
+            },
+          }}
+        />
+      </div>)}
     </div>
   );
 };
