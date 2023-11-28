@@ -22,10 +22,10 @@ import mysql.connector
 import unittest
 ############### END: BASIC IMPORTS ##################
 
-# s_ConfigFilePath = 'https://github.com/SWE4103-Group2/SWE4103_Group2_Project/blob/main/config.json'
+s_ConfigFilePath = 'https://github.com/SWE4103-Group2/SWE4103_Group2_Project/tree/main/config.json'
 
 ################### CONFIGURATION ###################
-with open(config.json, 'r') as config_file:
+with open(s_ConfigFilePath, 'r') as config_file:
     config = json.load(config_file)
 
 s_User                    = config["User"]
