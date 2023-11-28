@@ -1,7 +1,3 @@
-import unittest
-from SensorApplication import *
-from SensorApplication import Sensor 
-
 # Initialize Database Connections
 conn = mysql.connector.connect(user=s_User, password=s_Password, host=s_Host, database=s_DatabasePath)
 cursor = conn.cursor()
