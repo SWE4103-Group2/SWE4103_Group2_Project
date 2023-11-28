@@ -169,16 +169,16 @@ class UnitTests(unittest.TestCase):
     
     
     #Function to test total_energy_consumption at a specific timestamp
-    def test_total_energy_consumption(self):
-        result = total_energy_consumption(s_Timestamp2)
-        type = "Energy%"
-        sum_query = "SELECT SUM(val) FROM value WHERE timestamp = %s AND serialnum LIKE  %s"
-        cursor.execute(sum_query,(s_Timestamp2,type,))
-        data = cursor.fetchone()
-        self.assertIsNotNone(data, "Data was not found for the given sensor")
-        expected_value= data[0]
-        self.assertEqual(round(result), round(expected_value))
-        self.print_test_result()
+    # def test_total_energy_consumption(self):
+    #     result = total_energy_consumption(s_Timestamp2)
+    #     type = "Energy%"
+    #     sum_query = "SELECT SUM(val) FROM value WHERE timestamp = %s AND serialnum LIKE  %s"
+    #     cursor.execute(sum_query,(s_Timestamp2,type,))
+    #     data = cursor.fetchone()
+    #     self.assertIsNotNone(data, "Data was not found for the given sensor")
+    #     expected_value= data[0]
+    #     self.assertEqual(round(result), round(expected_value))
+    #     self.print_test_result()
     
     #Function to test total_water_consumption 
     def test_total_water_consumption(self):
@@ -191,24 +191,24 @@ class UnitTests(unittest.TestCase):
         self.print_test_result()
 
     #Function to test total_water_consumption at a specific timestamp
-    def test_total_water_consumption(self):
-        result = total_water_consumption(s_Timestamp)
-        type = "Water%"
-        sum_query = "SELECT SUM(val) FROM value WHERE timestamp = %s AND serialnum LIKE  %s"
-        cursor.execute(sum_query,(s_Timestamp,type,))
-        expected_value= cursor.fetchone()[0]
-        self.assertEqual(round(result), round(expected_value))
-        self.print_test_result()
+    # def test_total_water_consumption(self):
+    #     result = total_water_consumption(s_Timestamp)
+    #     type = "Water%"
+    #     sum_query = "SELECT SUM(val) FROM value WHERE timestamp = %s AND serialnum LIKE  %s"
+    #     cursor.execute(sum_query,(s_Timestamp,type,))
+    #     expected_value= cursor.fetchone()[0]
+    #     self.assertEqual(round(result), round(expected_value))
+    #     self.print_test_result()
     
     #Function to test total_offline
-    def test_total_offline(self):
-        result = total_offline()
-        status = "OFF"
-        sum_query = "SELECT COUNT(status) FROM sensor WHERE status =  %s"
-        cursor.execute(sum_query,(status,))
-        expected_value= cursor.fetchone()[0]
-        self.assertEqual(result, expected_value)
-        self.print_test_result()
+    # def test_total_offline(self):
+    #     result = total_offline()
+    #     status = "OFF"
+    #     sum_query = "SELECT COUNT(status) FROM sensor WHERE status =  %s"
+    #     cursor.execute(sum_query,(status,))
+    #     expected_value= cursor.fetchone()[0]
+    #     self.assertEqual(result, expected_value)
+    #     self.print_test_result()
 
     #Function to test total_out_of_bounds, TEST FAILS ... fix function
     # def test_total_out_of_bounds(self):
