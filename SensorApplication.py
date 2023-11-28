@@ -22,7 +22,7 @@ import mysql.connector
 import unittest
 ############### END: BASIC IMPORTS ##################
 
-s_ConfigFilePath = 'tree/main/config.json'
+s_ConfigFilePath = "config.json"
 
 ################### CONFIGURATION ###################
 with open(s_ConfigFilePath, 'r') as config_file:
