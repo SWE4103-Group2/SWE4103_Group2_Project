@@ -35,7 +35,7 @@ jobs:
         
       # Run unit tests from a tests.py file
     - name: Test with pytest
-      run: pytest tests.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
+      run: pytest UnitTests.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
 
       # Send test results to a .xml file
     - name: Upload pytest test results
