@@ -21,6 +21,8 @@ from datetime import datetime, timedelta
 import mysql.connector
 # for testing
 import unittest
+from pubsub import pub
+
 ############### END: BASIC IMPORTS ##################
 
 s_ConfigFilePath = 'config.json'
@@ -42,7 +44,7 @@ cursor = conn.cursor()
 #technician's schedule 
 schedule = 'Technician_Schedule_Form.xlsx'
 
-check_db = True  #a global variable, assuming db is not checked after working hours, this variable will only be set to true during working hours
+
 
 # Sensor Object Class
 class Sensor:
@@ -647,7 +649,7 @@ def find_next_day_of_week(current_day):
         return next_date.year, next_date.strftime('%B'), next_date.day
     else:
         return "Invalid day name"
-
+'''
 def getEarliestAvailability(arr_OfDataFrames, lst_IdentifiersInOrder):
     lst_result = []
     for df in arr_OfDataFrames:
@@ -730,21 +732,96 @@ def getEarliestAvailability(arr_OfDataFrames, lst_IdentifiersInOrder):
     closest_date, userID = min(zip(lst_DateObjects, lst_IdentifiersInOrder), key=lambda item: abs(item[0] - current_time))
 
     return next_day_of_week, s_Month, s_Day, s_Year, next_hour_str, s_AvailabilityString, closest_date, userID
+'''
+#UPDATED
+def getEarliestAvailability(arr_OfDataFrames, lst_IdentifiersInOrder):
+    lst_result = []
+    for df in arr_OfDataFrames:
+        current_time = datetime.now()
+        current_day = current_time.weekday()
+        day_of_week = current_time.strftime('%A')
+        current_hour = current_time.hour
+        next_hour = (current_hour + 1) % 24  # Use modulo operator to get next hour (handles hour 23 -> 0)
+ 
+        next_day = None
+        next_day_of_week = None
+        next_hour_val = None
+ 
+        if day_of_week not in ["Saturday", "Sunday"]:
+            filtered_df = df[df['Hours'] == f"0 days {next_hour:02d}:00:00"]
+            hour_and_day = filtered_df[day_of_week]
+ 
+            if hour_and_day.iat[0] == 1:
+                next_day = current_day
+                next_day_of_week = day_of_week
+                next_hour_val = next_hour
+            else:
+                tomorrow = current_time + timedelta(days=1)
+                day_of_week_tomorrow = tomorrow.strftime('%A')
+ 
+                if day_of_week_tomorrow == "Saturday":
+                    next_day = current_time + timedelta(days=2)
+                elif day_of_week_tomorrow == "Sunday":
+                    next_day = current_time + timedelta(days=1)
+                else:
+                    next_day = current_time + timedelta(days=1)
+ 
+                next_day_of_week = next_day.strftime('%A')
+ 
+                for index, row in df.iterrows():
+                    entry = row[next_day_of_week]
+                    if entry == 1:
+                        next_hour_val = row['Hours']
+                        break
+        else:
+            tomorrow = current_time + timedelta(days=1)
+            day_of_week_tomorrow = tomorrow.strftime('%A')
+ 
+            if day_of_week_tomorrow == "Saturday":
+                next_day = current_time + timedelta(days=2)
+            elif day_of_week_tomorrow == "Sunday":
+                next_day = current_time + timedelta(days=1)
+            else:
+                next_day = current_time + timedelta(days=1)
+ 
+            next_day_of_week = next_day.strftime('%A')
+ 
+            for index, row in df.iterrows():
+                entry = row[next_day_of_week]
+                if entry == 1:
+                    next_hour_val = row['Hours']
+                    break
+        s_Year, s_Month, s_Day = find_next_day_of_week(next_day_of_week)
+        month_number = datetime.strptime(s_Month, '%B').month  # Convert month string to integer
 
-def Book(i_UserID, s_DayOfWeek, s_Hour, s_AvailabilityString):
-    try:       
-        update_query = f"UPDATE schedule SET availability{s_DayOfWeek} = %s WHERE timeInHours = %s AND technicianID = %s"
-        s_Time = timedelta(days=0, hours=int(s_Hour[0:2]), minutes=0)
-        print(s_Time)
-        cursor.execute(update_query, ('N', s_Time, i_UserID))
-        conn.commit()
-        print(f"Success! Technician with ID '{i_UserID}' is booked for {s_AvailabilityString}")
-        return i_UserID, s_AvailabilityString
+        # Handle the case when next_hour_val is an empty string
+        next_hour_str = str(next_hour_val)[7:]
+        if next_hour_str:  # Check if next_hour_str is not an empty string
+            next_hour_str = next_hour_str
+            
+        s_AvailabilityString = f"{s_Year}-{month_number:02d}-{s_Day} {next_hour_str}"
+        lst_result.append([s_Year, month_number, s_Day, next_hour_str])
     
-    except mysql.connector.Error as err:
-        print(f"MySQL error: {err}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {str(e)}")
+    print(f"Next Time: {next_day_of_week} {s_Month} {s_Day}, {s_Year} at {next_hour_str}")
+
+    lst_DateObjects = []
+    val = lst_result[1]
+    date_object = datetime(val[0], val[1], val[2], int(val[3].split(':')[0]), int(val[3].split(':')[1]))
+    lst_DateObjects.append(date_object)
+
+    closest_date, userID = min(zip(lst_DateObjects, lst_IdentifiersInOrder), key=lambda item: abs(item[0] - current_time))
+
+    return next_day_of_week, s_Month, s_Day, s_Year, next_hour_str, s_AvailabilityString, closest_date, userID
+
+def Book(i_UserID, s_DayOfWeek, s_Hour, s_AvailabilityString):      
+    update_query = f"UPDATE schedule SET availability{s_DayOfWeek} = %s WHERE timeInHours = %s AND technicianID = %s"
+    s_Time = timedelta(days=0, hours=int(s_Hour[0:2]), minutes=0)
+    print(s_Time)
+    cursor.execute(update_query, ('N', s_Time, i_UserID))
+    conn.commit()
+    print(f"Success! Technician with ID '{i_UserID}' is booked for {s_AvailabilityString}")
+    return i_UserID, s_AvailabilityString
+    
 
 #Function to create tickets, should be called when a sensor's value is out of bounds or off 
 def create_ticket(serialNum):
@@ -753,6 +830,7 @@ def create_ticket(serialNum):
     cursor.execute(insert_query, (state, serialNum,))
     conn.commit()
 
+
 #Function to update tickets
 #States: RESOLVED, UNRESOLVED
 def update_ticket(state, ticket_id):
@@ -760,57 +838,68 @@ def update_ticket(state, ticket_id):
     cursor.execute(update_query, (state,ticket_id,))
     conn.commit()
 
-
-#Function to handle alerting subsystem 
 def alert(serialnumber):
-    select_query = "SELECT sensor,state FROM ticket"
-    cursor.execute(select_query)
-    tickets = cursor.fetchall()
-    ticket_exists = False
-    for ticket in tickets:
-        sensor,state = ticket
-        if serialnumber == sensor and state == "RESOLVED": 
-            create_ticket(serialnumber)
-            select_query = "SELECT id FROM ticket ORDER BY id DESC LIMIT 1"
-            cursor.execute(select_query)
-            id = cursor.fetchall()[0][0]
-            update_booking(serialnumber,id)
-            ticket_exists = True  
-        if  serialnumber == sensor and state == "UNRESOLVED":
-            ticket_exists = True 
-    
-    if not(ticket_exists):  
-        create_ticket(serialnumber)
-        select_query = "SELECT id FROM ticket WHERE sensor = %s"
+    # Check if there are any existing unresolved tickets for the given sensor
+    try:
+        select_query = "SELECT id FROM ticket WHERE sensor = %s AND state = 'UNRESOLVED'"
         cursor.execute(select_query, (serialnumber,))
-        id = cursor.fetchone()[0]
-        update_booking(serialnumber,id)
-        ticket_exists = True 
+        existing_unresolved_tickets = cursor.fetchall()
+    except mysql.connector.Error as e:
+        print(f"MySQL Error: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {str(e)}")
+    if not existing_unresolved_tickets:
+        # No unresolved ticket found, create a new one
+        create_ticket(serialnumber)
+        try:
+            select_query = "SELECT id FROM ticket WHERE sensor = %s ORDER BY id DESC LIMIT 1"
+            cursor.execute(select_query, (serialnumber,))
+            id = cursor.fetchone()[0]
+            update_booking(serialnumber, id)
+        except mysql.connector.Error as e:
+            print(f"MySQL Error: {e}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {str(e)}")
+    else:
+        return  # Exit the function
     
-#Function to update booking time in db  
+#Function to update booking time in db 
 def update_booking(serialnumber, id): 
     arr_df, lst_IdentifiersInOrder = getSchedule()
     s_DayOfWeek, s_Month, s_Day, s_Year, s_Hour, s_AvailabilityString, time_EarliestDate, i_UserID = getEarliestAvailability(arr_df, lst_IdentifiersInOrder)
     i_UserID, s_AvailabilityString = Book(i_UserID=i_UserID, s_DayOfWeek=s_DayOfWeek, s_Hour=s_Hour, s_AvailabilityString=s_AvailabilityString)
-    
-    update_query = "UPDATE ticket SET BookingTime = %s, technicianID = %s, sensor = %s WHERE id = %s"
-    cursor.execute(update_query, ((f"{s_DayOfWeek} {s_Month} {s_Day}, {s_Year} at {s_Hour}"), i_UserID, serialnumber, id,))
-    conn.commit()
+    try:
+        update_query = "UPDATE ticket SET BookingTime = %s, technicianID = %s, sensor = %s WHERE id = %s"
+        cursor.execute(update_query, ((f"{s_DayOfWeek} {s_Month} {s_Day}, {s_Year} at {s_Hour}"), i_UserID, serialnumber, id,))
+        conn.commit()
+    except mysql.connector.Error as e:
+        print(f"MySQL Error: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {str(e)}")
 
-
-#Function to continuously check the db 
+check_db = True
 def pollingDB():
+    count = 0
     while check_db:
-        select_query = "SELECT serialnumber,errorflag, status FROM sensor"
-        cursor.execute(select_query)
-        sensors = cursor.fetchall()
-        for sensor in sensors:
-            serialnumber,errorflag, status = sensor
-            if errorflag == 1 or status == 'OFF':
-                alert(serialnumber)
-
-#def workingHours():
-
+        print("Polling Count: ", count)
+        try:
+            select_query = "SELECT serialnumber, errorflag, status FROM sensor"
+            cursor.execute(select_query)
+            sensors = cursor.fetchall()
+            for sensor in sensors:
+                serialnumber, errorflag, status = sensor
+                if errorflag == 1 or status == 'OFF':
+                    alert(serialnumber)
+        except mysql.connector.Error as e:
+            print(f"MySQL Error: {e}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {str(e)}")
+                
+        # Sleep for a duration before refreshing data
+        time.sleep(10) 
+        count = count + 1
+    cursor.close()
+    conn.close()
 
 def resolveTicket(ticketID):
     try:
@@ -859,7 +948,7 @@ def main():
     #resolveTicket(2)
     
     #sensor = createSensor(s_SensorType="Water", s_Location="LakeHuron", i_SamplingRate=1)
-    #sensor = getSensor(s_SerialNumber="Water_LakeHuron_S0003")
+    #sensor = getSensor(s_SerialNumber="Water_Bathurst_S0044")
     #deleteSensor(s_SerialNumber="Water_LakeHuron_S0006")
     #getCurrentHistoricalData(s_SerialNumber=None)
 
@@ -869,7 +958,7 @@ def main():
     #sensor.set_value("2023-11-08 14:10:13", -1)
     #sensor.get_value("2023-11-08 14:10:12")
 
-    #sensor.set_status("off")
+    #sensor.set_status("OFF")
     #sensor.get_status()
     
     #sensor.set_errorflag(0)
@@ -899,6 +988,14 @@ def main():
     #print()
 
     pollingDB()
+
+    '''
+    for i in range(225,236):
+        delete_query = "DELETE FROM ticket WHERE id = %s"
+        cursor.execute(delete_query, (i,))
+        conn.commit()
+    '''
+
     
     
 if __name__ == "__main__":
