@@ -405,6 +405,19 @@ body {
   color: var(--white);
 }
 
+.centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Adjust the height as needed */
+}
+
+/* Additional styling for the centered content (optional) */
+.centered-content {
+  text-align: center;
+  /* Add other styling properties as needed */
+}
+
 /* ====================== Responsive Design ========================== */
 @media (max-width: 991px) {
   .navigation {

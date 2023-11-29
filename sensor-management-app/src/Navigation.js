@@ -1,41 +1,36 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from './App';
+import sensor from './assets/imgs/sensor.png';
+import './Navigation.css';
 
 const Navigation = () => {
     const { logout } = useContext(AuthContext);
-
-    function doClickTicketsR(e) {
-        e.preventDefault();  // Prevent the default behavior of the anchor tag
-        window.location.href = "accessdeniedR.html";
-    };
 
     return (
         <div className="navigation">
             <ul>
                 <li>
                     <a href="#">
-                        <table>
-                            <tbody>
-                                <tr>
-                                    <td width="60px">
-                                        <div className="imgBx">
-                                            <img src="assets/imgs/sensor2.jpg" alt="" />
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className="title">Sensor Mgt. System</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div className="item-container">
+                            <div className="image-container">
+                                <img
+                                    src={sensor}
+                                    alt=""
+                                    style={{ width: '60px', height: 'auto' }}
+                                />
+                            </div>
+                            <div className="text-container">
+                                <span className="title">Sensor Mgt. System</span>
+                            </div>
+                        </div>
                     </a>
                 </li>
 
                 <li>
                     <Link to="/real-time">
                         <span className="icon">
-                            <ion-icon name="home-outline"></ion-icon>
+                            <ion-icon name="refresh-circle-outline"></ion-icon>
                         </span>
                         <span className="title">Real-Time Data</span>
                     </Link>
@@ -44,7 +39,7 @@ const Navigation = () => {
                 <li>
                     <Link to="/historical">
                         <span className="icon">
-                            <ion-icon name="home-outline"></ion-icon>
+                            <ion-icon name="time-outline"></ion-icon>
                         </span>
                         <span className="title">Historical Data</span>
                     </Link>
@@ -53,7 +48,7 @@ const Navigation = () => {
                 <li>
                     <Link to="/analytics">
                         <span className="icon">
-                            <ion-icon name="people-outline"></ion-icon>
+                            <ion-icon name="bar-chart-outline"></ion-icon>
                         </span>
                         <span className="title">Analytics</span>
                     </Link>
@@ -62,7 +57,7 @@ const Navigation = () => {
                 <li>
                     <Link to="/reports">
                         <span className="icon">
-                            <ion-icon name="chatbubble-outline"></ion-icon>
+                            <ion-icon name="document-text-outline"></ion-icon>
                         </span>
                         <span className="title">Reports</span>
                     </Link>
@@ -71,7 +66,7 @@ const Navigation = () => {
                 <li>
                     <Link to="/sensors">
                         <span className="icon">
-                            <ion-icon name="help-outline"></ion-icon>
+                            <ion-icon name="settings-outline"></ion-icon>
                         </span>
                         <span className="title">Configure Sensor</span>
                     </Link>
@@ -80,7 +75,7 @@ const Navigation = () => {
                 <li>
                     <Link to="/tickets">
                         <span className="icon">
-                            <ion-icon name="settings-outline"></ion-icon>
+                            <ion-icon name="construct-outline"></ion-icon>
                         </span>
                         <span className="title">Tickets</span>
                     </Link>

@@ -16,28 +16,9 @@ const OfflineSensors = () => {
   useEffect(() => {
     // Fetch sensor data from Flask backend
     if (!redirectPath) {
-      axios.get('http://127.0.0.1:5000/')
+      axios.get('http://127.0.0.1:5000/offline', { withCredentials: true })
         .then(response => {
-          const allSensors = response.data;
-          const offlineSensors = Object.values(allSensors).map(sensor => {
-            let filteredHistoricalData = [];
-            if (sensor.type === 'Energy') {
-              filteredHistoricalData = sensor.historical_data
-                ? sensor.historical_data.filter(row => row.value < 0 || row.value > 50)
-                : [];
-            }
-            else if (sensor.type === 'Water') {
-              filteredHistoricalData = sensor.historical_data
-                ? sensor.historical_data.filter(row => row.value < 0 || row.value > 4)
-                : [];
-            }
-          
-            return {
-              ...sensor,
-              historical_data: filteredHistoricalData,
-            };
-          });
-          setOfflineSensors(offlineSensors);
+          setOfflineSensors(response.data);
           setLoading(false);
         })
         .catch(error => console.error('Error fetching sensors:', error));
@@ -51,21 +32,30 @@ const OfflineSensors = () => {
 
   return (
     <div>
-      <h2>Offline Sensors</h2>
+      <h2>Out of Bounds</h2>
+      <br/>
       {loading && <p>Loading...</p>}
       {Object.values(offlineSensors).map(sensor => (
-          sensor.historical_data.length > 0 && (
-              <div key={sensor.serial_number}>
-                  <div>Serial Number: {sensor.serial_number}</div>
-                  <div>Status: {sensor.status}</div>
-                  {sensor.historical_data.map((row, index) => (
-                      <div key={index}>
-                        Timestamp: {row.timestamp}, Value: {row.value}
-                      </div>
-                  ))}
-                  <br />
-              </div>
-          )
+        <div key={sensor.serial_number}>
+          <h3>{sensor.serial_number} Status: {sensor.status}</h3>
+          <table>
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sensor.historical_data.map((row, index) => (
+                    <tr key={index}>
+                      <td>{row.timestamp}</td>
+                      <td>{row.value}</td>
+                    </tr>
+                ))}
+              </tbody>
+          </table>
+          <br />
+        </div>
       ))}
     </div>
   );

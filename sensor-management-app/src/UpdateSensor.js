@@ -7,7 +7,7 @@ const UpdateSensor = ({ sensorId, onSensorUpdated }) => {
   // Function to fetch sensor data from the server
   const fetchSensorData = async () => {
     try {
-      const response = await axios.get(`http://127.0.0.1:5000/Sensors/${sensorId}`);
+      const response = await axios.get(`http://127.0.0.1:5000/Sensors/${sensorId}`, { withCredentials: true });
       setSensorData(Object.values(response.data)[0]); // Set the fetched sensor data in the state
     } catch (error) {
       console.error('Error fetching sensor data:', error);
@@ -21,7 +21,7 @@ const UpdateSensor = ({ sensorId, onSensorUpdated }) => {
 
   const handleUpdateSensor = async () => {
     try {
-      const response = await axios.patch(`http://127.0.0.1:5000/Sensors/${sensorId}`, sensorData);
+      const response = await axios.patch(`http://127.0.0.1:5000/Sensors/${sensorId}`, sensorData, { withCredentials: true });
       onSensorUpdated(response.data); // Notify parent component about the updated sensor
     } catch (error) {
       console.error('Error updating sensor:', error);

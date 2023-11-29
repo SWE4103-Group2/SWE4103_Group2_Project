@@ -8,7 +8,6 @@ Chart.register(LineElement, PointElement, LinearScale, CategoryScale);
 
 const RealTime = () => {
   const [realTimeData, setRealTimeData] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const [chartData, setChartData] = useState({
@@ -20,7 +19,6 @@ const RealTime = () => {
         lineTension: 0.1,
         backgroundColor: 'rgba(75,192,192,0.4)',
         borderColor: 'rgba(75,192,192,1)',
-        // ... other dataset configurations
         data: [],
       },
     ],
@@ -32,7 +30,7 @@ const RealTime = () => {
     const fetchData = async () => {
       try {
         // Fetch real-time data from Flask backend
-        const response = await axios.get('http://127.0.0.1:5000/real-time');
+        const response = await axios.get('http://127.0.0.1:5000/real-time', { withCredentials: true });
         console.log(response.data);
 
         // Sign in anonymously
@@ -65,16 +63,13 @@ const RealTime = () => {
           } else {
             setRealTimeData([]);
           }
-          setLoading(false);
         }, (error) => {
           console.error(error);
           setError('Error fetching real-time data from Firebase');
-          setLoading(false);
         });
       } catch (error) {
         console.error('Error fetching sensors:', error);
         setError('Error fetching sensors');
-        setLoading(false);
       }
     };
 

@@ -12,7 +12,7 @@ const Historical = () => {
 
   useEffect(() => {
       // Fetch sensor data from Flask backend
-      axios.get('http://127.0.0.1:5000/historical')
+      axios.get('http://127.0.0.1:5000/historical', { withCredentials: true })
         .then(response => {
           setHistoricalData(Object.values(response.data));
           setData(Object.values(response.data));
@@ -106,7 +106,7 @@ const Historical = () => {
 
       {loading && <p>Loading...</p>}
       {!loading && (
-        <table {...getTableProps()} className="historical-table">
+        <table {...getTableProps()}>
           <thead>
             {headerGroups.map(headerGroup => (
               <tr {...headerGroup.getHeaderGroupProps()}>

@@ -8,7 +8,7 @@ const Historical = () => {
 
   useEffect(() => {
       // Fetch sensor data from Flask backend
-      axios.get('http://127.0.0.1:5000/tickets')
+      axios.get('http://127.0.0.1:5000/tickets', { withCredentials: true })
         .then(response => {
           setTickets(response.data);
           console.log(response.data);

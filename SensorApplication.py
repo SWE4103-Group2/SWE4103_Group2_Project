@@ -413,7 +413,7 @@ def total_consumption(s_Timestamp=None):
         #returns total water consumption for historical data
         try:
             select_query = """
-                SELECT v.serialnum, v.val, v.timestamp, s.type
+                SELECT v.serialnum, v.timestamp, v.val, s.type
                 FROM value v
                 JOIN sensor s ON v.serialnum = s.serialnumber;
             """
@@ -424,8 +424,8 @@ def total_consumption(s_Timestamp=None):
                 totalEnergyConsumption = 0
                 for i in range (len(sensor_data)):
                     serialNum = sensor_data[i][0]
-                    val = sensor_data[i][1]
-                    timestamp = sensor_data[i][2]
+                    timestamp = sensor_data[i][1]
+                    val = sensor_data[i][2]
                     sensorType = sensor_data[i][3]
                     if sensorType == 'Water':
                         totalWaterConsumption = totalWaterConsumption + val
@@ -482,6 +482,35 @@ def total_out_of_bounds():
     except mysql.connector.Error as e:
         print(f"Error getting sensor data: {e}")
 
+def get_out_of_bounds(): 
+    try:
+        select_query = """
+                SELECT v.serialnum, v.timestamp, v.val, s.type, s.status
+                FROM value v
+                JOIN sensor s ON v.serialnum = s.serialnumber
+                WHERE s.errorflag = 1;
+            """
+        cursor.execute(select_query)
+        sensor_data = cursor.fetchall()
+        if sensor_data:
+            sensors_info = {}
+            for row in sensor_data:
+                serialnum = row[0]
+                timestamp = row[1]
+                val = row[2]
+                sensortype = row[3]
+                if val < 0 or (val > 4 and sensortype == 'Water') or (val > 50 and sensortype == 'Energy'):
+                    if serialnum not in sensors_info:
+                        sensors_info[serialnum] = {'serial_number': serialnum, 'historical_data': [], 'status': row[4]}
+                    sensors_info[serialnum]['historical_data'].append({ 'timestamp': str(timestamp), 'value': val })
+            print("Offline Sensors: ", sensors_info)
+            return sensors_info
+        else:
+            print(f"There are no offline sensors. ")
+            return None
+    except mysql.connector.Error as e:
+        print(f"Error getting sensor data: {e}")
+
 #Function to return the serial number of sensors that are out of bounds 
 def get_Out_Of_Bounds_Sensors():
     try:
@@ -493,7 +522,7 @@ def get_Out_Of_Bounds_Sensors():
             for i in range (len(sensor_data)):
                 serialNum = sensor_data[i][0]
                 error_flag = sensor_data[i][1]
-                if error_flag == 1: 
+                if error_flag == 1:
                     sensors.append(serialNum)
             print("Sensors : ", sensors)
             return  sensors
@@ -787,34 +816,75 @@ def get_tickets():
     return data
 
 #function to aggregate sensors by adding values
-def aggregatesensors(a: list[str], vsid: int):
+def aggregatesensors(serial_numbers):
     # initialize the val variable
-    value = 0  
-    
-    # Convert string array to int
-    intarray = convert_to_int(a)
+    value = 0
     
     # Get the sensor data from the database.
     try:
-        cursor.execute("SELECT JSON_ARRAYAGG(JSON_OBJECT('sensorid', sensorid, 'value', val)) FROM value;")
+        # parameterized query
+        query = "SELECT id FROM sensor WHERE serialnumber IN ({})".format(', '.join(['%s' for _ in serial_numbers]))
+        cursor.execute(query, serial_numbers)
+        results = cursor.fetchall()
+        
+        int_list = [item[0] for item in results]
+        str_list = [str(item[0]) for item in results]
+        
+        b = "insert into virtualsensor (sensors) values (%s); "
+        cursor.execute(b,(str(str_list),))
+        conn.commit()
+
+        # Get the last inserted ID
+        cursor.execute("SELECT LAST_INSERT_ID();")
+        vsid = cursor.fetchone()[0]
+
+        cursor.execute("SELECT JSON_OBJECT('sensorid', sensorid, 'value', val) FROM value;")
         result = cursor.fetchall()
-        for i in intarray:
-            for row in result:
-                if row == i:  
-                    value += result[i][val]  # Updated to use 'i' as index and 'value' in square brackets if 'value' is a column name
+        
+        for row in result:
+            # Extracting the JSON string from the tuple
+            json_string = row[0]
+
+            # Parsing the JSON string
+            data_dict = json.loads(json_string)
+
+            # Accessing the "sensorid" value
+            sensor_id = data_dict.get('sensorid')
+            if sensor_id in int_list:
+                value += data_dict.get('value')  # Updated to use 'i' as index and 'value' in square brackets if 'value' is a column name
         
         print(value)
-        #stmt = "INSERT INTO virtualvalue (sensorid, val) values (%s, %s)"
-        #cursor.execute(stmt, (vsid, value))
-        #conn.commit()  # Added parentheses to commit method
+        stmt = "INSERT INTO virtualvalue (virtualsensorid, val) values (%s, %s);"
+        cursor.execute(stmt, (vsid, value,))
+        conn.commit()  # Added parentheses to commit method
+        return {'vsid': vsid, 'value': value}
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
- 
-def convert_to_int(input: list[str]):
-    result = []
-    for item in input:
-        result.append(int(item))
-    return result
+        return None
+
+def get_virtual_sensors():
+    try:
+        query = """
+                    SELECT v.val, s.id, s.sensors
+                    FROM virtualvalue v
+                    JOIN virtualsensor s ON v.virtualsensorid = s.id;
+                """
+        cursor.execute(query)
+        results = cursor.fetchall()
+        sensors_info = []
+        if results:
+            for row in results:
+                value = row[0]
+                vsid = row[1]
+                sensors = row[2]
+                sensors_info.append({'vsid': vsid, 'value': value, 'sensors': sensors})
+            return sensors_info
+        else:
+            print("There are no virtual sensors within the database.")
+            return None
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
  
 ############### END: FUNCTIONS ###################
 
@@ -841,9 +911,11 @@ def main():
     #get_sensors('Water_LakeHuron_S0003')
 
     #get_sensor('Water_LakeHuron_S0003')
-    total_consumption()
-    total_offline()
+    #total_consumption()
+    #total_offline()
     total_out_of_bounds()
+    #aggregatesensors(['Water_LakeHuron_S0005', 'Water_LakeHuron_S0003', 'Water_Pond_S0007']
+
 
 if __name__ == "__main__":
     main()

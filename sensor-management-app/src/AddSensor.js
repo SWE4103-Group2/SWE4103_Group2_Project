@@ -6,7 +6,7 @@ const AddSensor = ({ onSensorAdded }) => {
 
   const handleAddSensor = async () => {
     try {
-      const response = await axios.post('http://127.0.0.1:5000/Sensors', sensorData);
+      const response = await axios.post('http://127.0.0.1:5000/Sensors', sensorData, { withCredentials: true });
       onSensorAdded(response.data); // Notify parent component about the added sensor
       setSensorData({ s_SensorType: '', s_Location: '', i_SamplingRate: '' }); // Clear input field
     } catch (error) {
@@ -43,7 +43,7 @@ const AddSensor = ({ onSensorAdded }) => {
         />
       </label>
       <br />
-      <button onClick={handleAddSensor}>Add Sensor</button>
+      <button onClick={handleAddSensor}>Add</button>
     </div>
   );
 };

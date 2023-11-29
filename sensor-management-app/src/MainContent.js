@@ -1,15 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import axios from 'axios';
 import ConfigureSensor from './ConfigureSensor';
 import Historical from './Historical';
 import OfflineSensors from './OfflineSensors';
 import RealTime from './RealTime';
-import Reports from './Reports';
+import Analytics from './Analytics';
 import Sensors from './Sensors';
 import Tickets from './Tickets';
+import VirtualSensor from './VirtualSensor';
+import customer from './assets/imgs/customer.png'
 
 const MainContent = ({ showSensors=false}) => {
   const { show, sensorid } = useParams();
+  const [sensorIds, setSensorIds] = useState([]);
+
+  useEffect(() => {
+    // Fetch sensor IDs
+    axios.get('http://127.0.0.1:5000/sensors', { withCredentials: true })
+      .then(response => {
+        setSensorIds(Object.keys(response.data));
+      })
+      .catch(error => {
+        console.error('Error fetching data:', error);
+      });
+  }, []);
   
   return (
     <div>
@@ -27,7 +42,7 @@ const MainContent = ({ showSensors=false}) => {
                 </div>
 
                 <div className="user">
-                    <img src="assets/imgs/sensor1.jpg" alt=""/>
+                    <img src={customer} alt=""/>
                 </div>
             </div>
 
@@ -39,7 +54,7 @@ const MainContent = ({ showSensors=false}) => {
                     </div>
 
                     <div className="iconBx">
-                        <ion-icon name="eye-outline"></ion-icon>
+                        <ion-icon name="alert-outline"></ion-icon>
                     </div>
                 </div>
 
@@ -49,7 +64,7 @@ const MainContent = ({ showSensors=false}) => {
                     </div>
 
                     <div className="iconBx">
-                        <ion-icon name="cart-outline"></ion-icon>
+                        <ion-icon name="construct-outline"></ion-icon>
                     </div>
                 </div>
 
@@ -59,7 +74,7 @@ const MainContent = ({ showSensors=false}) => {
                     </div>
 
                     <div className="iconBx">
-                        <ion-icon name="chatbubbles-outline"></ion-icon>
+                        <ion-icon name="bar-chart-outline"></ion-icon>
                     </div>
                 </div>
 
@@ -69,14 +84,14 @@ const MainContent = ({ showSensors=false}) => {
                     </div>
 
                     <div className="iconBx">
-                        <ion-icon name="cash-outline"></ion-icon>
+                        <ion-icon name="document-outline"></ion-icon>
                     </div>
                 </div>
             </div>
 
             {/* ================ Order Details List ================= */}
             <div className="details">
-                <div className="Documentation">
+                <div className="centered-content">
                     {show==='real-time' && (
                         <RealTime />
                     )}
@@ -84,10 +99,10 @@ const MainContent = ({ showSensors=false}) => {
                         <Historical />
                     )}
                     {show==='analytics' && (
-                        <OfflineSensors />
+                        <Analytics />
                     )}
                     {show==='reports' && (
-                        <Reports />
+                        <OfflineSensors />
                     )}
                     {showSensors && !sensorid && (
                         <Sensors />
@@ -103,7 +118,9 @@ const MainContent = ({ showSensors=false}) => {
                 {/* ================= New Customers ================ */}
                 <div className="recentCustomers">
                     <div className="cardHeader">
-                        <h2>Contact Lids</h2>
+                        {show==='analytics' && (
+                            <VirtualSensor sensorIds={sensorIds} />
+                        )}
                     </div>
                 </div>
             </div>

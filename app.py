@@ -1,10 +1,13 @@
 from SensorApplication import (
     Sensor, get_sensors, get_sensor, getSensor, deleteSensor, createSensor,
     getCurrentHistoricalData,
+    get_out_of_bounds,
     total_consumption,
     total_offline,
     total_out_of_bounds,
-    get_tickets
+    get_virtual_sensors,
+    get_tickets,
+    aggregatesensors
 )
 from flask import Flask, request
 from flask_cors import CORS
@@ -14,7 +17,7 @@ from threading import Thread, Lock
 from time import sleep
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 
 # Initialize Firebase Admin
 cred = credentials.Certificate("swe4103-db-firebase-adminsdk-jq4dv-e4128ec05e.json")
@@ -103,8 +106,22 @@ def simulation():
 
     return "Real-time simulation started", 200
 
-@app.route("/reports")
-def reports():
+@app.route("/offline")
+def offline():
+    global real_time_thread
+
+    if real_time_thread and real_time_thread.is_alive():
+        real_time_thread.stop()
+        real_time_thread.join()
+    
+    out_of_bounds = get_out_of_bounds()
+    if out_of_bounds:
+        return out_of_bounds, 200
+    else:
+        return out_of_bounds, 404
+
+@app.route("/analytics")
+def analytics():
     global real_time_thread
 
     if real_time_thread and real_time_thread.is_alive():
@@ -114,7 +131,8 @@ def reports():
     water, energy = total_consumption()
     offline = total_offline()
     out = total_out_of_bounds()
-    return {"water": water, "energy": energy, "offline": offline, "out": out}, 200
+    virtualsensors = get_virtual_sensors()
+    return {"water": water, "energy": energy, "offline": offline, "out": out, "virtualsensors": virtualsensors}, 200
 
 @app.route("/tickets")
 def tickets():
@@ -128,6 +146,21 @@ def tickets():
     if tickets:
         return tickets, 200
     return tickets, 404
+
+@app.route("/aggregate", methods=['POST'])
+def aggregate():
+    global real_time_thread
+
+    if real_time_thread and real_time_thread.is_alive():
+        real_time_thread.stop()
+        real_time_thread.join()
+    
+    data = request.get_json()
+    sensorIds = data['sensorIds']
+    aggregate = aggregatesensors(sensorIds)
+    if aggregate:
+        return f"Virtual sensor {aggregate['vsid']} was created successfully!", 200
+    return f"Virtual sensor creation was unsuccessful!", 404
     
 @app.route("/Sensors/<s_SerialNumber>", methods= ['GET', 'DELETE', 'PATCH', 'POST'])
 def sensor(s_SerialNumber):

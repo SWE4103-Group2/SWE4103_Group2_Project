@@ -16,7 +16,7 @@ const Sensors = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:5000/sensors');
+        const response = await axios.get('http://127.0.0.1:5000/sensors', { withCredentials: true });
         setSensors(response.data);
       } catch (error) {
         console.error('Error fetching sensors:', error);
@@ -46,6 +46,7 @@ const Sensors = () => {
     <div>
         <h2>Sensors</h2>
         <br />
+        <h3>Add Sensor</h3>
         <AddSensor onSensorAdded={handleSensorAdded} />
         <table>
             <tbody>
