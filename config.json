@@ -1,6 +1,8 @@
 {
-    "lst_SerialNumbers":["Water_LakeHuron_S0003", "Water_LakeHuron_S0005", "Energy_UNB_S0023", "Energy_UNBSJ_S0030"],
-    "i_SamplingRate": 5,
+    "s_ServiceAccountKeyPath": "C:/Users/olivi/Downloads/swe4103-db-firebase-adminsdk-jq4dv-e4128ec05e.json",
+    "s_DatabaseURL": "https://swe4103-db-default-rtdb.firebaseio.com/",
+    "lst_SerialNumbers":["Water_LakeHuron_S0002", "Water_LakeHuron_S0003"],
+    "i_SamplingRate": 15,
     "s_TimeFormat": "%Y-%m-%d %H:%M:%S",
     "s_TimeZone": "Atlantic",
     "f_RangeMin": 2.0,
