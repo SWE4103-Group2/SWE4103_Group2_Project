@@ -36,9 +36,17 @@ jobs:
         
       # Run unit tests from a UnitTests.py file
     - name: Test with pytest
-      run: pytest UnitTests.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
+      run: |
+        pytest UnitTests.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
+        pytest SensorApplicationDataSimulator.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
         #coverage run --source=. -m UnitTests.py
 
+    - name: Pytest coverage comment
+      uses: MishaKav/pytest-coverage-comment@main
+      with:
+        pytest-coverage-path: ./pytest-coverage.txt
+        junitxml-path: ./pytest.xml
+    
       # Send test results to a .xml file
     - name: Upload pytest test results
       uses: actions/upload-artifact@v3
