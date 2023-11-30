@@ -38,14 +38,13 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       #build python project
-    - name: Build package
-      run: python -m build
+    # - name: Build package
+    #   run: python -m build
       
       # Run tests from UnitTests.py and SensorApplicationDataSimulator.py files
     - name: Test with pytest
       run: |
         pytest UnitTests.py SensorApplicationDataSimulator.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
-        #coverage run --source=. -m UnitTests.py
 
       #test coverage results
     - name: Pytest coverage comment
