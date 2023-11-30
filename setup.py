@@ -11,7 +11,7 @@ setuptools.setup(
    author='SWE4103-Group2',
    packages=['https://github.com/SWE4103-Group2/SWE4103_Group2_Project'],  #same as name
    install_requires=[], #external packages as dependencies
-    package_dir={https://github.com/SWE4103-Group2/SWE4103_Group2_Project/tree/main/sensor-management-app},
+    package_dir={sensor-management-app},
     packages=find_packages("src"),
     python_requires=">=3.6",
 )
