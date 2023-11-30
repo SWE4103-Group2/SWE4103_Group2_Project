@@ -1,6 +1,6 @@
 import unittest
-from SensorApplication import *
-from SensorApplication import Sensor 
+from SensorApplication4 import *
+from SensorApplication4 import Sensor 
 from contextlib import redirect_stdout
 from io import StringIO
 
