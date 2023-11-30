@@ -58,5 +58,5 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: pytest-results-${{ matrix.python-version }}
-        path: junit/test-results-${{ matrix.python-version }}.xml
+        path: .github/workflows/test-results-${{ matrix.python-version }}.xml
       if: ${{ always() }}
