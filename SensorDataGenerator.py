@@ -23,7 +23,7 @@ s_ConfigFilePath = "config.json"
 with open(s_ConfigFilePath, 'r') as config_file:
     config = json.load(config_file)
 
-lst_SerialNumbers         = config["lst_SerialNumbers"]
+s_SerialNumber             = config["s_SerialNumber"]
 i_SamplingRate            = config["i_SamplingRate"]
 s_TimeFormat              = config["s_TimeFormat"]
 s_TimeZone                = config["s_TimeZone"]
@@ -66,7 +66,7 @@ def update_database(s_SerialNumber, i_DataValue):
 
 def main():
     for i in range(2): # generate 5 values for sensors in list
-        for serialNumber in lst_SerialNumbers: # to get name of file
+        for serialNumber in s_SerialNumber: # to get name of file
             value = generate_sensor_data() # simulate sensor data generation
             timestamp = update_database(serialNumber, value)
             print(f"{serialNumber}\t{timestamp}\t{value}")
