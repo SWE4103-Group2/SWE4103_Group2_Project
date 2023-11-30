@@ -9,7 +9,7 @@ setuptools.setup(
    version='1.0',
    description=description,
    author='SWE4103-Group2',
-   packages=['SWE4103_Group2_Project'],  #same as name
+   packages=['src'],  #same as name
    install_requires=[], #external packages as dependencies
     url="https://github.com/SWE4103-Group2/SWE4103_Group2_Project",
 )
