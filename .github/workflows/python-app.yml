@@ -2,7 +2,7 @@
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
 name: Build Python application
-
+run-name: ${{ github.actor }} has pushed changes to main
 on: [push]
 
 permissions:
@@ -28,6 +28,8 @@ jobs:
         pip install pymysql
         pip install build
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install chromedriver-autoinstaller selenium pyvirtualdisplay
+        sudo apt-get install xvfb
 
       # lint syntax errors and unused imports
     - name: Lint with flake8
@@ -46,7 +48,11 @@ jobs:
       run: |
         pytest UnitTests.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
         #appTest.py
-    
+
+      #run selenium test
+    # - name: Running the Python script
+    #   run: python Selenium-Template.py
+        
       # Send test results to a .xml file
     - name: Upload pytest test results
       uses: actions/upload-artifact@v3
