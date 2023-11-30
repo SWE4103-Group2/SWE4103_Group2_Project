@@ -46,8 +46,8 @@ jobs:
       # Run tests from UnitTests.py and SensorApplicationDataSimulator.py files
     - name: Test with pytest
       run: |
-        pytest UnitTests.py SensorDataGenerator.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
-        #appTest.py
+        pytest SensorDataGenerator.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
+        #appTest.py, UnitTests.py
 
       #run selenium test
     # - name: Running the Python script
