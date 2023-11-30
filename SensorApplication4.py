@@ -1,9 +1,7 @@
 #####################################################
 '''
    (SensorApplication.py)   OGR
-
 env: Windows
-
 '''
 ################### BASIC IMPORTS ###################
 import pandas as pd
@@ -644,21 +642,25 @@ def get_schedule():
 
 def get_earliest_availability(arr_OfDataFrames, lst_IdentifiersInOrder):
     try:
-        lst_result = []
-        lst_DateObjects = []
+        # lst_result = [] 
+        lst_DateObjects = [] # List to store date objects corresponding to the earliest availability for each technician. 
+        # Loop through each DataFrame in the input array. 
         for df in arr_OfDataFrames:
-            current_time = datetime.now()  # get the current time
+            current_time = datetime.now()  # Get the current time. 
 
+            # Extract year, month, day, and hour from the current time. 
             year = current_time.year
             month = current_time.month
             day = current_time.day
             hour = current_time.hour
 
+            # Set the current time manually to avoid errors. 
             current_time = datetime(year, month, day, hour, 0, 0)  # setting time manually to avoid error
     
             current_day = current_time.strftime('%A')
 
             while True:
+                # Filter the DataFrame for the current hour and day. 
                 filtered_df = df[df["Hours"] == (f"0 days {(current_time.hour+1) % 24:02d}:00:00")]
                 
                 if current_time.hour == 0:
@@ -668,59 +670,71 @@ def get_earliest_availability(arr_OfDataFrames, lst_IdentifiersInOrder):
                         current_time += timedelta(days=(7 - current_time.weekday()))
                         current_day = "Monday"
                         
-                # Check if filtered_df is empty
+                # Check if filtered_df is empty.
                 if not filtered_df.empty:
                     i_AvailabilityForNextHour = filtered_df[current_day].iat[0]
                 # print("HERE")
+                    # If if the hour is available. 
                     if i_AvailabilityForNextHour == 1:
                         available_day = current_day
                         i_AvailableHour = current_time.hour
-                        current_time += timedelta(hours=1)  # increment hour after finding an available hour
-                        current_day = current_time.strftime('%A')  # update the day
+                        current_time += timedelta(hours=1)  # Increment hour after finding an available hour.
+                        current_day = current_time.strftime('%A')  # Update the day. 
                         break
 
-                current_time += timedelta(hours=1)  # Increment hour
+                current_time += timedelta(hours=1)  # Increment hour.
 
                 if current_time.weekday() == 0 and current_time.hour == 0:
-                    break # break out of the loop if we've gone through a full week
+                    break 
 
-            # Include date information
+            # Include date information. 
             year = current_time.year
             month = current_time.month
             day = current_time.day
             hour = current_time.hour
             dateObject = datetime(year, month, day, hour, 0, 0)
             
+            # Format the date as a string. 
             s_DateString = current_time.strftime('%A, %B %d, %Y at %I:%M %p')
             
-            lst_DateObjects.append(dateObject)
+            lst_DateObjects.append(dateObject) # Add the date object to the list of date objects. 
         
+        # Find the earliest date and corresponding technican ID. 
         closest_date, userID = min(zip(lst_DateObjects, lst_IdentifiersInOrder), key=lambda item: abs(item[0] - current_time))
+        # Return the earliest date and technician ID. 
         return closest_date, userID
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
 
 def Book(i_UserID, DateObject):
     try:
+        # Extract month, day, year, weekday and hour from the provided date object. 
         month = DateObject.strftime("%B")
         day = DateObject.day
         year = DateObject.year
         week_day = DateObject.strftime("%A")
         hour = DateObject.hour
+
+        # Construct the update query to mark the technician as booked for the specified time. 
         update_query = f"UPDATE schedule SET availability{week_day} = %s WHERE timeInHours = %s AND technicianID = %s"
         time = f"{hour}:00:00"
+        # Execute the update query with the appropriate parameters. 
         cursor.execute(update_query, ('N', time, i_UserID))
         conn.commit()
 
+        # Print a success messsage indicating the booking details. 
         print(f"Success! Technician with ID '{i_UserID}' is booked for {week_day} {month} {day}, {year} at {time}")
     
     except mysql.connector.Error as err:
+        # Handle MySQL errors. 
         print(f"MySQL error: {err}")
     except Exception as e:
+        # Handle unexpected errors. 
         print(f"An unexpected error occurred: {str(e)}")
+    # Return a tuple containing he technician ID and the formatted booking details. 
     return (i_UserID, f"{day} {month} {day}, {year} at {time}")
 
-#Function to create tickets, should be called when a sensor's value is out of bounds or off 
+# Function to create tickets, should be called when a sensor's value is out of bounds or off 
 def create_ticket(serialNum):
     state = "UNRESOLVED"
     insert_query = "INSERT INTO ticket (State, sensor) VALUES (%s, %s)"
