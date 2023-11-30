@@ -43,24 +43,13 @@ def test_delete_sensor():
     print(response, response.text)
     #assert response.status_code == 200
 
-
-def test_set_sensor_value():
-    sensorId = 'Water_LakeHuron_S0003'
-    sensor_data = {
-        'timestamp': '2023-11-08 14:07:28',
-        'value': 3.7
-    }
-    response = requests.patch(f'{BASE_URL}/Sensors/{sensorId}', json=sensor_data)
-    print(response, response.text)
-    
-
 def main(): 
     #test_get_sensors()
     #test_get_sensor()
     #test_get_sensor_not_found()
     #test_delete_sensor()
-    #test_create_sensor()
-    test_set_sensor_value()
+    test_create_sensor()
+    
 
 if __name__ == '__main__':
     #pytest.main()
