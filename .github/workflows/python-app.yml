@@ -37,8 +37,8 @@ jobs:
       # Run unit tests from a UnitTests.py file
     - name: Test with pytest
       run: |
-        # pytest UnitTests.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
-        pytest SensorApplicationDataSimulator.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
+        pytest UnitTests.py SensorApplicationDataSimulator.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
+
         #coverage run --source=. -m UnitTests.py
 
     - name: Pytest coverage comment
