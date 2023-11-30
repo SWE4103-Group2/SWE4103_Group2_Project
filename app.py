@@ -1,13 +1,15 @@
 from SensorApplication import (
     Sensor, get_sensors, get_sensor, getSensor, deleteSensor, createSensor,
+    generate_sensor_data, update_database,
+    get_latest_data,
     getCurrentHistoricalData,
     get_out_of_bounds,
-    total_consumption,
-    total_offline,
-    total_out_of_bounds,
-    get_virtual_sensors,
+    total_consumption, total_offline, total_out_of_bounds,
+    aggregatesensors,
+    update_aggregate, get_virtual_sensors,
+    update_schedule_in_database,
     get_tickets,
-    aggregatesensors
+    resolveTicket
 )
 from flask import Flask, request
 from flask_cors import CORS
@@ -15,62 +17,22 @@ import firebase_admin
 from firebase_admin import credentials, db
 from threading import Thread, Lock
 from time import sleep
+import json
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
-# Initialize Firebase Admin
-cred = credentials.Certificate("swe4103-db-firebase-adminsdk-jq4dv-e4128ec05e.json")
-firebase_admin.initialize_app(cred, {
-    'databaseURL': 'https://swe4103-db-default-rtdb.firebaseio.com'
-})
+s_ConfigFilePath = 'config.json'
 
-data_ref = db.reference("/energydata")
-ref = db.reference("/simulation")
-data = ref.get()
+################### CONFIGURATION ###################
+with open(s_ConfigFilePath, 'r') as config_file:
+    config = json.load(config_file)
 
-class RealTimeThread(Thread):
-    def __init__(self, lock):
-        super().__init__()
-        self._stop_flag = False
-        self.lock = lock
-
-    def run(self):
-        global data, data_ref
-        while not self._stop_flag:
-            result = data_ref.get()
-            if result is not None:
-                last = list(result.values())[-1]
-            else:
-                last = {"id": "", "timestamp": "", "value": -1}
-            
-            # Real-time data simulation
-            prev = {"id": "", "timestamp": "", "value": -1}
-            for val in data.values():
-                with self.lock:
-                    if prev["id"] == last["id"] and prev["timestamp"] == last["timestamp"]:
-                        break
-                    prev = val
-            
-            with self.lock:
-                data_ref.push().set(val)
-                print("Simulating real-time data... ", val)
-            
-            sleep(5)
-
-    def stop(self):
-        self._stop_flag = True
-
-real_time_thread = None
+serialNumbers = config["lst_SerialNumbers"]
+i = 0
 
 @app.route("/sensors")
 def sensors():
-    global real_time_thread
-
-    if real_time_thread and real_time_thread.is_alive():
-        real_time_thread.stop()
-        real_time_thread.join()
-    
     sensors = get_sensors()
     if sensors:
         return sensors, 200
@@ -78,12 +40,6 @@ def sensors():
 
 @app.route("/historical")
 def historical():
-    global real_time_thread
-
-    if real_time_thread and real_time_thread.is_alive():
-        real_time_thread.stop()
-        real_time_thread.join()
-    
     data = getCurrentHistoricalData()
     if data:
         return data, 200
@@ -92,84 +48,86 @@ def historical():
 # Home page to display the list of sensors
 @app.route("/real-time")
 def simulation():
-    global real_time_thread
+    global i
+    for serialNum in serialNumbers:
+        sensor = getSensor(serialNum)
+        if sensor:
+            samplingRate = sensor.get_sampling_rate()
+            if samplingRate <= 5:
+                data_value = generate_sensor_data(sensor.get_type())
+                update_database(serialNum, data_value)
+                print("Simulating real-time data... ", data_value)
+            else:
+                j = samplingRate // 5
+                if i % j == 0:
+                    data_value = generate_sensor_data()
+                    update_database(serialNum, data_value)
+                    print("Simulating real-time data... ", data_value)
+    i += 1
 
-    if real_time_thread and real_time_thread.is_alive():
-        return "Real-time simulation is already running", 200
-
-    # Create a lock
-    data_lock = Lock()
-
-    # Start a new thread
-    real_time_thread = RealTimeThread(data_lock)
-    real_time_thread.start()
-
-    return "Real-time simulation started", 200
+    data = get_latest_data(serialNumbers)
+    if data:
+        return data, 200
+    else:
+        return "Sensor data not found.", 404
 
 @app.route("/offline")
 def offline():
-    global real_time_thread
-
-    if real_time_thread and real_time_thread.is_alive():
-        real_time_thread.stop()
-        real_time_thread.join()
-    
     out_of_bounds = get_out_of_bounds()
     if out_of_bounds:
         return out_of_bounds, 200
     else:
         return out_of_bounds, 404
 
-@app.route("/analytics")
-def analytics():
-    global real_time_thread
-
-    if real_time_thread and real_time_thread.is_alive():
-        real_time_thread.stop()
-        real_time_thread.join()
-    
-    water, energy = total_consumption()
-    offline = total_offline()
-    out = total_out_of_bounds()
-    virtualsensors = get_virtual_sensors()
-    return {"water": water, "energy": energy, "offline": offline, "out": out, "virtualsensors": virtualsensors}, 200
-
-@app.route("/tickets")
-def tickets():
-    global real_time_thread
-
-    if real_time_thread and real_time_thread.is_alive():
-        real_time_thread.stop()
-        real_time_thread.join()
-    
-    tickets = get_tickets()
-    if tickets:
-        return tickets, 200
-    return tickets, 404
-
 @app.route("/aggregate", methods=['POST'])
 def aggregate():
-    global real_time_thread
-
-    if real_time_thread and real_time_thread.is_alive():
-        real_time_thread.stop()
-        real_time_thread.join()
-    
     data = request.get_json()
     sensorIds = data['sensorIds']
     aggregate = aggregatesensors(sensorIds)
     if aggregate:
         return f"Virtual sensor {aggregate['vsid']} was created successfully!", 200
     return f"Virtual sensor creation was unsuccessful!", 404
-    
-@app.route("/Sensors/<s_SerialNumber>", methods= ['GET', 'DELETE', 'PATCH', 'POST'])
-def sensor(s_SerialNumber):
-    global real_time_thread
 
-    if real_time_thread and real_time_thread.is_alive():
-        real_time_thread.stop()
-        real_time_thread.join()
+@app.route("/analytics")
+def analytics():
+    water, energy = total_consumption()
+    offline = total_offline()
+    out = total_out_of_bounds()
+    update_aggregate()
+    virtualsensors = get_virtual_sensors()
+    return {"water": water, "energy": energy, "offline": offline, "out": out, "virtualsensors": virtualsensors}, 200
+
+@app.route("/upload", methods=['POST'])
+def upload():
+    try:
+        excel_file = request.files['file']
+        technician_id = request.form['technician_id']
+        update_schedule_in_database(excel_file, technician_id)
+        return "File uploaded successfully", 200
+    except Exception as e:
+        print(str(e))
+        return f"Error processing the file: {str(e)}", 500
+
+@app.route("/tickets")
+def tickets():
+    tickets = get_tickets()
+    if tickets:
+        return tickets, 200
+    return tickets, 404
     
+@app.route("/resolve", methods=['PATCH'])
+def ticket():
+    try:
+        data = request.get_json()
+        ticket_id = data['ticketId']
+        resolveTicket(ticket_id)
+        return f"Status of ticket {ticket_id} was updated to RESOLVED.", 200
+    except Exception as e:
+        print(str(e))
+        return f"Error updating {ticket_id}", 404
+    
+@app.route("/Sensors/<s_SerialNumber>", methods= ['GET', 'DELETE', 'PATCH'])
+def sensor(s_SerialNumber):
     if request.method == 'GET':
         if isinstance(getSensor(s_SerialNumber), Sensor):
             return get_sensor(s_SerialNumber), 200
@@ -189,9 +147,9 @@ def sensor(s_SerialNumber):
         if isinstance(getSensor(s_SerialNumber), Sensor):
             #assumming data is received in json format
             data = request.get_json()
-            s_SensorType = data['s_SensorType']
-            s_Location = data['s_Location']
-            i_SamplingRate = data['i_SamplingRate']
+            s_SensorType = data['type']
+            s_Location = data['location']
+            i_SamplingRate = data['samplingrate']
             if getSensor(s_SerialNumber).set_value(s_SensorType, s_Location, i_SamplingRate): 
                 return f"{s_SerialNumber} parameters were updated.", 200
             else:
@@ -202,12 +160,6 @@ def sensor(s_SerialNumber):
 
 @app.route("/Sensors", methods= ['POST'])
 def create_sensor():
-    global real_time_thread
-
-    if real_time_thread and real_time_thread.is_alive():
-        real_time_thread.stop()
-        real_time_thread.join()
-    
     if request.method == 'POST':
         data = request.get_json()
 
@@ -222,4 +174,4 @@ def create_sensor():
             return str(e), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(ssl_context=('cert.pem', 'key.pem'), debug=True)

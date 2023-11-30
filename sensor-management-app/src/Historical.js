@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useTable, useFilters, useSortBy } from 'react-table';
+import Select from 'react-select';
 import './Historical.css'
 
 const Historical = () => {
@@ -8,11 +9,12 @@ const Historical = () => {
   const [loading, setLoading] = useState(true);
   const [filterStart, setFilterStart] = useState(null);
   const [filterEnd, setFilterEnd] = useState(null);
+  const [selectedSensors, setSelectedSensors] = useState([]);
   const [data, setData] = useState([]);
 
   useEffect(() => {
       // Fetch sensor data from Flask backend
-      axios.get('http://127.0.0.1:5000/historical', { withCredentials: true })
+      axios.get('https://127.0.0.1:5000/historical', { withCredentials: true })
         .then(response => {
           setHistoricalData(Object.values(response.data));
           setData(Object.values(response.data));
@@ -34,11 +36,12 @@ const Historical = () => {
       const startFilterDate = filterStart ? new Date(filterStart + 'T00:00:00') : null;
       const endFilterDate = filterEnd ? new Date(filterEnd + 'T00:00:00') : null;
   
-      if (startFilterDate && entryDate < startFilterDate) {
+      if ((startFilterDate && entryDate < startFilterDate) || (endFilterDate && entryDate > endFilterDate)) {
         return false;
       }
-  
-      if (endFilterDate && entryDate > endFilterDate) {
+
+      // Check selected sensors
+      if (selectedSensors.length > 0 && !selectedSensors.includes(entry.serialnum)) {
         return false;
       }
   
@@ -47,6 +50,22 @@ const Historical = () => {
   
     setData(filteredData);
     setLoading(false);
+  };
+
+  const handleDownloadCSV = () => {
+    // Convert the data to CSV format
+    const csvData = [
+      ['ID', 'Timestamp', 'Value'],
+      ...data.map(entry => [entry.serialnum, entry.timestamp, entry.value]),
+    ];
+
+    // Create a CSV file
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'historical_data.csv';
+    link.click();
   };
 
   const columns = React.useMemo(
@@ -83,11 +102,17 @@ const Historical = () => {
     useSortBy
   );
 
+  const sensorOptions = Array.from(new Set(historicalData.map(entry => entry.serialnum))).map(sensorId => ({
+    value: sensorId,
+    label: sensorId,
+  }));
+
   return (
     <div>
       <h2>Historical Data</h2>
-      <label>
-        Filter Start Date:
+      <br/>
+      <label style={{ marginRight: '10px' }}>
+        Start Date:
         <input
           type="date"
           value={filterStart || ''}
@@ -95,45 +120,67 @@ const Historical = () => {
         />
       </label>
       <label>
-        Filter End Date:
+        End Date:
         <input
           type="date"
           value={filterEnd || ''}
           onChange={(e) => setFilterEnd(e.target.value)}
         />
       </label>
+      <br/>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <label>
+          Sensors:
+        </label>
+        <Select
+          isMulti
+          options={sensorOptions}
+          value={selectedSensors.map(sensorId => ({ value: sensorId, label: sensorId }))}
+          onChange={selectedOptions => setSelectedSensors(selectedOptions.map(option => option.value))}
+          placeholder="Select..."
+          styles={{
+            control: (styles) => ({ ...styles, minWidth: '650px' }),
+          }}
+        />
+      </div>
       <button onClick={handleFilter}>Apply Filter</button>
 
       {loading && <p>Loading...</p>}
       {!loading && (
-        <table {...getTableProps()}>
-          <thead>
-            {headerGroups.map(headerGroup => (
-              <tr {...headerGroup.getHeaderGroupProps()}>
-                {headerGroup.headers.map(column => (
-                  <th
-                    {...column.getHeaderProps(column.getSortByToggleProps())}
-                    className={column.isSorted ? (column.isSortedDesc ? 'sort-desc' : 'sort-asc') : ''}
-                  >
-                    {column.render('Header')}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody {...getTableBodyProps()}>
-            {rows.map(row => {
-              prepareRow(row);
-              return (
-                <tr {...row.getRowProps()}>
-                  {row.cells.map(cell => (
-                    <td {...cell.getCellProps()}>{cell.render('Cell')}</td>
+        <div>
+          <br/>
+          <button onClick={handleDownloadCSV}>Download CSV</button>
+          <table {...getTableProps()}>
+            <thead>
+              {headerGroups.map(headerGroup => (
+                <tr {...headerGroup.getHeaderGroupProps()}>
+                  {headerGroup.headers.map(column => (
+                    <th
+                      {...column.getHeaderProps(column.getSortByToggleProps())}
+                      className={column.isSorted ? (column.isSortedDesc ? 'sort-desc' : 'sort-asc') : ''}
+                    >
+                      {column.render('Header')}
+                    </th>
                   ))}
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ))}
+            </thead>
+            <tbody {...getTableBodyProps()}>
+              {rows.map(row => {
+                prepareRow(row);
+                return (
+                  <tr {...row.getRowProps()} key={row.id}>
+                    {row.cells.map(cell => (
+                      <td {...cell.getCellProps()} key={cell.column.id}>
+                        {cell.render('Cell')}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

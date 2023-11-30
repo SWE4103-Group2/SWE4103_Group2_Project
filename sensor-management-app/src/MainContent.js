@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import React from 'react';
+import { Link, useParams } from 'react-router-dom';
 import ConfigureSensor from './ConfigureSensor';
 import Historical from './Historical';
 import OfflineSensors from './OfflineSensors';
@@ -8,23 +7,12 @@ import RealTime from './RealTime';
 import Analytics from './Analytics';
 import Sensors from './Sensors';
 import Tickets from './Tickets';
+import UploadSchedule from './UploadSchedule';
 import VirtualSensor from './VirtualSensor';
 import customer from './assets/imgs/customer.png'
 
-const MainContent = ({ showSensors=false}) => {
-  const { show, sensorid } = useParams();
-  const [sensorIds, setSensorIds] = useState([]);
-
-  useEffect(() => {
-    // Fetch sensor IDs
-    axios.get('http://127.0.0.1:5000/sensors', { withCredentials: true })
-      .then(response => {
-        setSensorIds(Object.keys(response.data));
-      })
-      .catch(error => {
-        console.error('Error fetching data:', error);
-      });
-  }, []);
+const MainContent = ({ showSensors=false, showAnalytics=false }) => {
+  const { show, sensorid, create } = useParams();
   
   return (
     <div>
@@ -58,15 +46,17 @@ const MainContent = ({ showSensors=false}) => {
                     </div>
                 </div>
 
-                <div className="card">
-                    <div>
-                        <div className="cardName">Ticket Management System</div>
-                    </div>
+                <Link to="/schedule" style={{ textDecoration: 'none' }}>
+                    <div className="card">
+                        <div>
+                            <div className="cardName">Ticket Management System</div>
+                        </div>
 
-                    <div className="iconBx">
-                        <ion-icon name="construct-outline"></ion-icon>
+                        <div className="iconBx">
+                            <ion-icon name="construct-outline"></ion-icon>
+                        </div>
                     </div>
-                </div>
+                </Link>
 
                 <div className="card">
                     <div>
@@ -98,8 +88,11 @@ const MainContent = ({ showSensors=false}) => {
                     {show==='historical' && (
                         <Historical />
                     )}
-                    {show==='analytics' && (
+                    {showAnalytics && !create && (
                         <Analytics />
+                    )}
+                    {create && (
+                        <VirtualSensor />
                     )}
                     {show==='reports' && (
                         <OfflineSensors />
@@ -110,6 +103,9 @@ const MainContent = ({ showSensors=false}) => {
                     {sensorid && (
                         <ConfigureSensor sensorid={sensorid} />
                     )}
+                    {show==='schedule' && (
+                        <UploadSchedule />
+                    )}
                     {show==='tickets' && (
                         <Tickets />
                     )}
@@ -118,9 +114,11 @@ const MainContent = ({ showSensors=false}) => {
                 {/* ================= New Customers ================ */}
                 <div className="recentCustomers">
                     <div className="cardHeader">
-                        {show==='analytics' && (
-                            <VirtualSensor sensorIds={sensorIds} />
-                        )}
+                        <div>
+                            <h2>Contact</h2>
+                            <br/>
+                            <p>The Toronto and Region Conservation Authority (TRCA)</p>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,28 +1,35 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 
 const UpdateSensor = ({ sensorId, onSensorUpdated }) => {
   const [sensorData, setSensorData] = useState({ type: '', location: '', samplingrate: '' });
+  const [error, setError] = useState('');
 
   // Function to fetch sensor data from the server
-  const fetchSensorData = async () => {
+  const fetchSensorData = useCallback(async () => {
     try {
-      const response = await axios.get(`http://127.0.0.1:5000/Sensors/${sensorId}`, { withCredentials: true });
+      const response = await axios.get(`https://127.0.0.1:5000/Sensors/${sensorId}`, { withCredentials: true });
       setSensorData(Object.values(response.data)[0]); // Set the fetched sensor data in the state
     } catch (error) {
       console.error('Error fetching sensor data:', error);
     }
-  };
+  }, [sensorId]);
 
   // useEffect hook to fetch sensor data when the component mounts
   useEffect(() => {
     fetchSensorData();
-  }, [sensorId]); // Trigger the fetch when sensorId changes
+  }, [fetchSensorData]); // Trigger the fetch when sensorId changes
 
   const handleUpdateSensor = async () => {
+    if (!sensorData.type || !sensorData.location || sensorData.samplingrate <= 0) {
+      setError('Please provide valid input for all fields.');
+      return;
+    }
+
     try {
-      const response = await axios.patch(`http://127.0.0.1:5000/Sensors/${sensorId}`, sensorData, { withCredentials: true });
+      const response = await axios.patch(`https://127.0.0.1:5000/Sensors/${sensorId}`, sensorData, { withCredentials: true });
       onSensorUpdated(response.data); // Notify parent component about the updated sensor
+      setError('');
     } catch (error) {
       console.error('Error updating sensor:', error);
     }
@@ -30,6 +37,7 @@ const UpdateSensor = ({ sensorId, onSensorUpdated }) => {
 
   return (
     <div>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
       <label>
         Sensor Type:
         <input

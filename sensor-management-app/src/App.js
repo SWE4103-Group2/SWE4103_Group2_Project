@@ -11,6 +11,7 @@ export const AuthContext = createContext();
 const AuthProvider = ({ children }) => {
   const [isAuthenticated, setAuthenticated] = useState(false);
   const [accountType, setAccountType] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check local storage for authentication status on component mount
@@ -20,6 +21,7 @@ const AuthProvider = ({ children }) => {
       setAuthenticated(JSON.parse(storedAuth));
       setAccountType(JSON.parse(storedAcc));
     }
+    setLoading(false);
   }, []);
 
   const login = (account) => {
@@ -40,6 +42,10 @@ const AuthProvider = ({ children }) => {
     localStorage.removeItem('accountType');
   };
 
+  if (loading) {
+    return null; // Render nothing while checking local storage
+  }
+
   return (
     <AuthContext.Provider value={{ isAuthenticated, accountType, login, logout }}>
       {children}
@@ -49,7 +55,7 @@ const AuthProvider = ({ children }) => {
 
 const PrivateRoute = ({ element, page }) => {
   const { isAuthenticated } = useContext(AuthContext);
-
+  console.log(isAuthenticated);
   if (page) {
     return isAuthenticated ? element : <LoginPage />
   }
@@ -69,6 +75,10 @@ const App = () => {
           <Route
             path="/sensors/:sensorid?"
             element={<PrivateRoute element={<MainContent showSensors={true} />} />}
+          />
+          <Route
+            path="/analytics/:create?"
+            element={<PrivateRoute element={<MainContent showAnalytics={true} />} />}
           />
           <Route path="/:show?" element={<PrivateRoute element={<MainContent />} />} />
         </Routes>

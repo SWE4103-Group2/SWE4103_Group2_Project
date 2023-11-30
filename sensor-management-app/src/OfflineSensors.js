@@ -16,7 +16,7 @@ const OfflineSensors = () => {
   useEffect(() => {
     // Fetch sensor data from Flask backend
     if (!redirectPath) {
-      axios.get('http://127.0.0.1:5000/offline', { withCredentials: true })
+      axios.get('https://127.0.0.1:5000/offline', { withCredentials: true })
         .then(response => {
           setOfflineSensors(response.data);
           setLoading(false);

@@ -1,12 +1,17 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DeleteSensor from './DeleteSensor';
 import UpdateSensor from './UpdateSensor';
 
 const ConfigureSensor = ({ sensorid }) => {
+  const navigate = useNavigate();
+  
+  const [updateMessage, setUpdateMessage] = useState('')
   const handleSensorUpdated = (updatedSensorId) => {
-    console.log(updatedSensorId);
+    setUpdateMessage(updatedSensorId);
   };
+
+  const handleBack = () => navigate('/sensors');
 
   return (
     <div>
@@ -19,11 +24,15 @@ const ConfigureSensor = ({ sensorid }) => {
             sensorId={sensorid}
         />
         <br/>
-        <div>
-            <Link to='/sensors'>
-              <button>Back</button>
-            </Link>
-        </div>
+        {updateMessage && (
+          <div>
+            <p>{updateMessage}</p>
+          </div>
+        )}
+        <br/>
+        <button onClick={handleBack}>
+          Back
+        </button>
     </div>
   );
 };

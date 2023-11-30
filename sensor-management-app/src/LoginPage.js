@@ -198,8 +198,6 @@ const LoginPage = () => {
             <input type="text" name="name" id="username" placeholder="Username" value={username} required
               onChange={(e) => setUsername(e.target.value)}
             />
-            <label id="icon" htmlFor="name"><i className="fas fa-user"></i></label>
-            <input type="text" name="name" id="name"/>
             <label id="icon" htmlFor="name"><i className="fas fa-unlock-alt"></i></label>
             <input type="password" name="name" id="password" placeholder="Password" value={password} required
               onChange={(e) => setPassword(e.target.value)}

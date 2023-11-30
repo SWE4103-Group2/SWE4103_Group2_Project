@@ -6,6 +6,7 @@ import useAuthorization from './useAuthorization';
 
 const Sensors = () => {
   const [sensors, setSensors] = useState({});
+  const [sortOrder, setSortOrder] = useState('asc');
 
   // Specify the allowed account types for this route
   const allowedAccounts = ['scientist', 'technician'];
@@ -16,7 +17,7 @@ const Sensors = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:5000/sensors', { withCredentials: true });
+        const response = await axios.get('https://127.0.0.1:5000/sensors', { withCredentials: true });
         setSensors(response.data);
       } catch (error) {
         console.error('Error fetching sensors:', error);
@@ -37,10 +38,23 @@ const Sensors = () => {
     });
   };
 
+  const handleSort = () => {
+    setSortOrder((prevSortOrder) => (prevSortOrder === 'asc' ? 'desc' : 'asc'));
+  };
+
   // If redirectPath is not null, redirect the user
   if (redirectPath) {
     return <Navigate to={redirectPath} />;
   }
+
+  // Convert sensors object to array for sorting
+  const sortedSensors = Object.values(sensors).sort((a, b) => {
+    if (sortOrder === 'asc') {
+      return a.serial_number.localeCompare(b.serial_number);
+    } else {
+      return b.serial_number.localeCompare(a.serial_number);
+    }
+  });
 
   return (
     <div>
@@ -48,9 +62,13 @@ const Sensors = () => {
         <br />
         <h3>Add Sensor</h3>
         <AddSensor onSensorAdded={handleSensorAdded} />
+        <br/>
+        <button onClick={handleSort}>
+          Sort {sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+        </button>
         <table>
             <tbody>
-                {Object.values(sensors).map((sensor) => (
+                {sortedSensors.map((sensor) => (
                     <tr key={sensor.serial_number}>
                         <td>{sensor.serial_number}</td>
                         <td>
