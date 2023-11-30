@@ -13,6 +13,7 @@ from random import randint
 import json
 # pip install mysql-connector-python
 import mysql.connector
+from SensorApplication4 import *
 
 ############### END: BASIC IMPORTS ##################
 
