@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -19,6 +18,7 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: "3.10"
+        
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -26,21 +26,28 @@ jobs:
         pip install pandas
         pip install mysql-connector-python
         pip install pymysql
-        
+        pip install build
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # lint syntax errors and unused imports
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-        
-      # Run unit tests from a UnitTests.py file
+
+      #build python project
+    - name: Build package
+      run: python -m build
+      
+      # Run tests from UnitTests.py and SensorApplicationDataSimulator.py files
     - name: Test with pytest
       run: |
         pytest UnitTests.py SensorApplicationDataSimulator.py --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
-
         #coverage run --source=. -m UnitTests.py
 
+      #test coverage results
     - name: Pytest coverage comment
       uses: MishaKav/pytest-coverage-comment@main
       with:
@@ -53,3 +60,4 @@ jobs:
       with:
         name: pytest-results-${{ matrix.python-version }}
         path: junit/test-results-${{ matrix.python-version }}.xml
+      if: ${{ always() }}
