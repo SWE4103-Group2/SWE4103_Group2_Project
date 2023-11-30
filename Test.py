@@ -20,7 +20,7 @@ import mysql.connector
 
 ############### END: BASIC IMPORTS ##################
 
-s_ConfigFilePath = '/Users/briannaorr/Documents/Github/SWE4103_Group2_Project/config.json'
+s_ConfigFilePath = 'main/config.json'
 
 ################### CONFIGURATION ###################
 with open(s_ConfigFilePath, 'r') as config_file:
