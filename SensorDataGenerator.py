@@ -40,7 +40,7 @@ cursor = conn.cursor()
 
 # Function to generate simulated sensor data
 def generate_sensor_data():
-    if randint(0, 100) < 90:  # 99.9% chance of valid data
+    if randint(0, 100) < 99.9:  # 99.9% chance of valid data
         return random.uniform(f_RangeMin, f_RangeMax) # return a value in a set range (can be made configurable) assumed float
     else:
         return -1 
