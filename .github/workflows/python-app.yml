@@ -58,11 +58,5 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: pytest-results-${{ matrix.python-version }}
-        path: .github/workflows/test-results-${{ matrix.python-version }}.xml
+        path: junit/test-results-${{ matrix.python-version }}.xml
       if: ${{ always() }}
-
-    - name: Download test results
-      run: zip -r pytest-results.zip build/
-      uses: ncipollo/release-action@v1
-      with:
-        artifacts: "pytest-results.zip"
