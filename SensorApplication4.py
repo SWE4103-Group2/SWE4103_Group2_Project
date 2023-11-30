@@ -1,4 +1,3 @@
-
 #####################################################
 '''
    (SensorApplication.py)   OGR
@@ -499,44 +498,57 @@ def total_out_of_bounds():
         print(f"Error getting sensor data: {e}")
 
 #Function to return the serial number of sensors that are out of bounds 
-def get_Out_Of_Bounds_Sensors():
+def get_out_of_bounds_sensors():
     try:
+        # Define the SQL query to select serial number and error flag from the sensor table.
         select_query = "SELECT serialnumber, errorflag FROM sensor"
+
+        # Execute the SQL query.
         cursor.execute(select_query)
+        # Fetch all the rows in a list of lists.
         sensor_data = cursor.fetchall()
+        
+        # Check if there are any existing sensors with values that are out of bounds.  
         if sensor_data:
             sensors = []
+
+            # Loop through each sensor in the fetched data. 
             for i in range (len(sensor_data)):
-                serialNum = sensor_data[i][0]
-                error_flag = sensor_data[i][1]
+                serialNum = sensor_data[i][0] # Extract the serial number from the current row. 
+                error_flag = sensor_data[i][1] # Extract error flag from the current row.
+
+                # Check if the error flag indicates that the sensor is out of bounds (i.e., error flag = 1).
                 if error_flag == 1: 
-                    sensors.append(serialNum)
-            print("Sensors : ", sensors)
+                    sensors.append(serialNum) # Add the serial number to the list of sensors that are out of bounds.
+            print("Sensors : ", sensors) # Print the list of sensors that are out of bounds.
             return  sensors
-        else:
+        else: # If there are no sensors in the database, print a message. 
             print( f"There are no sensors.")
             return None
+    # If there is an error, print the error.
     except mysql.connector.Error as e:
         print(f"Error getting sensor data: {e}")
 
-#Function to update or insert the availability of a technician
+# Function to update or insert the availability of a technician
 def update_schedule_in_database(excel_file, technician_id):
-    #boolean to determine if the schedule is being updated or inserted, 0 - updates schedule , 1 - inserts schedule
+    # Variable to check if the schedule is being updated or inserted.
     update_insert = 0
-    
-    select_query = "SELECT * FROM schedule WHERE technicianID = %s"
-    cursor.execute(select_query, (technician_id,))
+
+    select_query = "SELECT * FROM schedule WHERE technicianID = %s" 
+    cursor.execute(select_query, (technician_id,)) 
     schedule_data = cursor.fetchall() 
 
+    # Check if the schedule exists in the database.
     if len(schedule_data) == 0:
         update_insert = 1
     print(update_insert)
-    #convert schedule to json object 
+
+    # Convert schedule to json object. 
     df = pd.read_excel(excel_file)
     data = df.to_json(orient='records')
     schedule_data = json.loads(data)
 
-    
+    # Loop through each row in the schedule.
     for record in schedule_data:
         hour = record["Hour"]
         mon = record["Monday"]
@@ -547,6 +559,7 @@ def update_schedule_in_database(excel_file, technician_id):
         sat = record["Saturday"]
         sun = record["Sunday"]
         
+        # Check if the schedule is being updated or inserted.
         print(hour, mon, tues, wed, thurs, fri)
         try:
             if update_insert == 0:
@@ -563,12 +576,12 @@ def update_schedule_in_database(excel_file, technician_id):
                 cursor.execute(insert_query, (technician_id, hour, mon, tues, wed, thurs, fri, sat, sun,))
                 conn.commit()
 
+        # Print the error if there is one.
         except mysql.connector.Error as e:
             print(f"Error getting sensor data: {e}")
 
-
 # Function to retrieve user's schedule from the database
-def getSchedule():
+def get_schedule():
     try:
         # query everything in a schedule
         select_query = "SELECT timeInHours, availabilityMonday, availabilityTuesday, availabilityWednesday, availabilityThursday, availabilityFriday, availabilitySaturday, availabilitySunday, technicianID FROM schedule"
@@ -619,7 +632,7 @@ def getSchedule():
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
 
-def getEarliestAvailability(arr_OfDataFrames, lst_IdentifiersInOrder):
+def get_earliest_availability(arr_OfDataFrames, lst_IdentifiersInOrder):
     try:
         lst_result = []
         lst_DateObjects = []
@@ -740,17 +753,18 @@ def alert(serialnumber):
     
 #Function to update booking time in db  
 def update_booking(serialnumber, id): 
-    arr_df, lst_IdentifiersInOrder = getSchedule()
-    time_EarliestDate, i_UserID = getEarliestAvailability(arr_df, lst_IdentifiersInOrder)
-    i_UserID, s_AvailabilityString = Book(i_UserID=i_UserID, DateObject = time_EarliestDate)
+    arr_df, lst_IdentifiersInOrder = get_schedule()
+    time_earliest_date, i_UserID = get_earliest_availability(arr_df, lst_IdentifiersInOrder)
+    i_UserID, s_AvailabilityString = Book(i_UserID=i_UserID, DateObject = time_earliest_date)
     print(i_UserID)
     update_query = "UPDATE ticket SET BookingTime = %s, technicianID = %s, sensor = %s WHERE id = %s"
     cursor.execute(update_query, ((s_AvailabilityString), i_UserID, serialnumber, id,))
     conn.commit()
 
 check_db = True
-def pollingDB():
+def polling_db():
     count = 0
+    # Data from previous poll
     while check_db:
         print("Polling Count: ", count)
         try:
@@ -772,7 +786,7 @@ def pollingDB():
     cursor.close()
     conn.close()
 
-def resolveTicket(ticketID):
+def resolve_ticket(ticketID):
     try:
         select_query = "SELECT * FROM ticket WHERE id = %s"
         cursor.execute(select_query, (ticketID,))
@@ -817,12 +831,12 @@ def resolveTicket(ticketID):
 
 def main():
     #update_schedule_in_database(excel_file = "C:/Users/olivi/Desktop/test/Technician_Schedule_Form.xlsx", technician_id = 2)
-    #arr_df, lst_IdentifiersInOrder = getSchedule()
+    #arr_df, lst_IdentifiersInOrder = get_schedule()
     #print (arr_df)
-    #closest_date, userID = getEarliestAvailability(arr_df, lst_IdentifiersInOrder)
+    #closest_date, userID = get_earliest_availability(arr_df, lst_IdentifiersInOrder)
     #Book(i_UserID=userID, DateObject=closest_date)
     #update_booking(serialnumber="Water_LakeHuron_S0003", id=1)
-    #resolveTicket(2)
+    #resolve_ticket(2)
     #print(arr_df)
     #sensor = createSensor(s_SensorType="Water", s_Location="LakeHuron", i_SamplingRate=1)
     #sensor = getSensor(s_SerialNumber="Water_LakeHuron_S0003")
@@ -850,21 +864,21 @@ def main():
     #total_water_consumption("2023-11-08 14:07:33")
     #total_offline()
     #total_out_of_bounds()
-    #get_Out_Of_Bounds_Sensors()
+    #get_out_of_bounds_sensors()
     #retrieve_earliest_opentime()
     #schedule_technician()
     #update_schedule_in_database(schedule, 1)
-    #df = getSchedule(i_UserID=2)
-    #s_DayOfWeek, s_Month, s_Day, s_Year, s_Hour, s_AvailabilityString = getEarliestAvailability(df)
+    #df = get_schedule(i_UserID=2)
+    #s_DayOfWeek, s_Month, s_Day, s_Year, s_Hour, s_AvailabilityString = get_earliest_availability(df)
     #Book(i_UserID=1, s_DayOfWeek=s_DayOfWeek, s_Hour=s_Hour, s_AvailabilityString=s_AvailabilityString)
     #create_ticket()
     #update_ticket("RESOLVED", 1)
-    #arr_df, lst_IdentifiersInOrder = getSchedule()
-    #s_DayOfWeek, s_Month, s_Day, s_Year, s_Hour, s_AvailabilityString, time_EarliestDate, i_UserID = getEarliestAvailability(arr_df, lst_IdentifiersInOrder)
+    #arr_df, lst_IdentifiersInOrder = get_schedule()
+    #s_DayOfWeek, s_Month, s_Day, s_Year, s_Hour, s_AvailabilityString, time_earliest_date, i_UserID = get_earliest_availability(arr_df, lst_IdentifiersInOrder)
     #Book(i_UserID=i_UserID, s_DayOfWeek=s_DayOfWeek, s_Hour=s_Hour, s_AvailabilityString=s_AvailabilityString)
     #print()
 
-    #pollingDB()
+    #polling_db()
     alert("Water_LakeHuron_S0028")
 
 
