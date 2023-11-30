@@ -1,0 +1,12 @@
+.item-container {
+    display: flex; /* Use flexbox to arrange children horizontally */
+    align-items: center; /* Center items vertically within the container */
+}
+
+.image-container {
+    margin-right: 10px; /* Adjust as needed to add space between image and text */
+}
+
+.title {
+    font-size: 18px; /* Adjust as needed */
+}

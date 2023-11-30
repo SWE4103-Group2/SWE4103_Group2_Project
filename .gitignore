@@ -1,0 +1,9 @@
+# .gitignore
+cert.pem
+key.pem
+.DS_Store
+__pycache__/
+venv/
+sensor-management-app/node_modules/
+sensor-management-app/.DS_Store
+sensor-management-app/src/.DS_Store
