@@ -534,16 +534,17 @@ def update_schedule_in_database(excel_file, technician_id):
     # Variable to check if the schedule is being updated or inserted.
     update_insert = 0
 
+    # SQL query to select schedule data for a specific technician.
     select_query = "SELECT * FROM schedule WHERE technicianID = %s" 
     cursor.execute(select_query, (technician_id,)) 
     schedule_data = cursor.fetchall() 
 
     # Check if the schedule exists in the database.
     if len(schedule_data) == 0:
-        update_insert = 1
+        update_insert = 1 # Set the flag to indcate that the schedule is being inserted.
     print(update_insert)
 
-    # Convert schedule to json object. 
+    # Convert schedule to a JSON object. 
     df = pd.read_excel(excel_file)
     data = df.to_json(orient='records')
     schedule_data = json.loads(data)
@@ -563,15 +564,18 @@ def update_schedule_in_database(excel_file, technician_id):
         print(hour, mon, tues, wed, thurs, fri)
         try:
             if update_insert == 0:
+                # If updating, get the schedule entry ID for the specific technician and hour.
                 select_query_id = "SELECT id FROM schedule WHERE technicianID = %s and timeInHours = %s"
                 cursor.execute(select_query_id, (technician_id,hour,))
                 user_data = cursor.fetchall() 
                 id = user_data[0][0] 
                 print(id)
+                # Update the existing schedule entry with new availability.
                 update_query = "UPDATE schedule SET availabilityMonday = %s, availabilityTuesday = %s, availabilityWednesday = %s, availabilityThursday = %s, availabilityFriday = %s, availabilitySaturday = %s, availabilitySunday = %s WHERE id = %s"
                 cursor.execute(update_query, (mon,tues,wed,thurs,fri,id,))
                 conn.commit
             else:
+                # If inserting, create a new schedule entry with the specified values. 
                 insert_query = "INSERT INTO schedule (technicianID, timeInHours, availabilityMonday, availabilityTuesday, availabilityWednesday, availabilityThursday, availabilityFriday, availabilitySaturday, availabilitySunday) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
                 cursor.execute(insert_query, (technician_id, hour, mon, tues, wed, thurs, fri, sat, sun,))
                 conn.commit()
@@ -583,28 +587,32 @@ def update_schedule_in_database(excel_file, technician_id):
 # Function to retrieve user's schedule from the database
 def get_schedule():
     try:
-        # query everything in a schedule
+        # Query all schedule data from the database. 
         select_query = "SELECT timeInHours, availabilityMonday, availabilityTuesday, availabilityWednesday, availabilityThursday, availabilityFriday, availabilitySaturday, availabilitySunday, technicianID FROM schedule"
         cursor.execute(select_query)
         schedule_data = cursor.fetchall()
 
-        if schedule_data:  # if there is an entry
-            lst_Identifiers = [] 
-            for row in schedule_data: # save each row of schedule data
+        if schedule_data:  # Check if there is any schedule in the database. 
+            lst_Identifiers = [] # List to store unique technician IDs. 
+            # Loop through each row of schedule data. 
+            for row in schedule_data: 
                 timeInHours, arr_Monday, arr_Tuesday, arr_Wednesday, arr_Thursday, arr_Friday, arr_Saturday, arr_Sunday, technicianID = row
-                if technicianID not in lst_Identifiers: # check that the id does not already exist
-                    lst_Identifiers.append(technicianID) # save unique ids
+                # Check if technician ID is not already in the list. 
+                if technicianID not in lst_Identifiers: 
+                    lst_Identifiers.append(technicianID) # Save the unique technician IDs. 
             
-            lst_df = [] # list of all dataframes (schedules)
-            lst_IdentifiersInOrder = []
-            for idNum in lst_Identifiers: # for each id get the corresponding schedule
+            lst_df = [] # List to store DataFrames for each technician's schedule. 
+            lst_IdentifiersInOrder = [] # List to store technician IDs in order. 
+            for idNum in lst_Identifiers: 
+                # Query schedule for the specific technician. 
                 query = "SELECT timeInHours, availabilityMonday, availabilityTuesday, availabilityWednesday, availabilityThursday, availabilityFriday, availabilitySaturday, availabilitySunday FROM schedule WHERE technicianID = %s"
             
                 cursor.execute(query, (idNum,))
                 userInfoData = cursor.fetchall()
 
-                if userInfoData:  # if there is an entry
+                if userInfoData:  # Check if there is schedule data for the technician. 
                     rows = []
+                    # Loop through each row of the technician's schedule data.
                     for i in userInfoData:
                         timeInHours, arr_Monday, arr_Tuesday, arr_Wednesday, arr_Thursday, arr_Friday, arr_Saturday, arr_Sunday = i
                         new_row = {
@@ -620,10 +628,12 @@ def get_schedule():
 
                         rows.append(new_row)
 
+                    # Create a DataFrame for the technician's schedule. 
                     df = pd.concat([pd.DataFrame(rows)], ignore_index=True)
                     df = df.replace({'Y': 1, 'N': 0})
-                    lst_df.append(df) # list of schedule matrices in binary format
-                    lst_IdentifiersInOrder.append(idNum)
+                    lst_df.append(df) # Add the schedule DataFrame to the list. 
+                    lst_IdentifiersInOrder.append(idNum) # Add the technician ID to the list in order. 
+            # Return the list of schedule DataFrames and the list of technician IDs in order. 
             return lst_df, lst_IdentifiersInOrder
         else:
             print(f"No data found in schedule table")
