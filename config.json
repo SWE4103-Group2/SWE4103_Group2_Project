@@ -1,5 +1,4 @@
 {
-    "s_ServiceAccountKeyPath": "/Users/briannaorr/Documents/Github/SWE4103_Group2_Project/swe4103-db-firebase-adminsdk-jq4dv-e4128ec05e.json",
     "s_DatabaseURL": "https://swe4103-db-default-rtdb.firebaseio.com/",
     "s_SensorPath": "/sensors",
     "s_DataPath": "/waterdata",
